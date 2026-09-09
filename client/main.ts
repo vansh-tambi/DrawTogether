@@ -1,16 +1,34 @@
 import { initCanvas, CANVAS_BG_COLOR } from './canvas';
 import { WebSocketClient } from './websocket';
+import { CursorOverlayManager } from './cursors';
+import { PresenceUI } from './presence';
 
 document.addEventListener('DOMContentLoaded', () => {
   const canvasEngine = initCanvas('canvas');
   console.log('[Main] Full-bleed CanvasEngine initialized with paper background:', CANVAS_BG_COLOR);
 
+  const cursorOverlayEl = document.getElementById('cursor-overlay') as HTMLElement;
+  const presenceContainerEl = document.getElementById('presence-container') as HTMLElement;
+
+  const cursorManager = new CursorOverlayManager(cursorOverlayEl);
+
   const userId = `user_${Math.random().toString(36).substring(2, 8)}`;
   const roomId = 'default-room';
+
+  const presenceUI = new PresenceUI(presenceContainerEl, userId);
 
   canvasEngine.setUserId(userId);
 
   const wsClient = new WebSocketClient();
+
+  // Send throttled cursor movements to server
+  window.addEventListener('pointermove', (e: PointerEvent) => {
+    wsClient.send({
+      type: 'cursor-move',
+      x: Math.round(e.clientX),
+      y: Math.round(e.clientY),
+    });
+  });
 
   // Wire local canvas stroke events to WebSocket messages
   canvasEngine.onStrokeStart = (stroke) => {
@@ -42,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Keyboard shortcuts for testing
+  // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
     if (e.key === 'b' || e.key === 'B') {
       canvasEngine.setTool('brush');
@@ -79,20 +97,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   wsClient.onMessage((message) => {
     switch (message.type) {
-      case 'welcome':
+      case 'welcome': {
         console.log(`[Main] Joined room! Assigned color: ${message.assignedColor}. Active users:`, message.presence);
         canvasEngine.setColor(message.assignedColor);
         canvasEngine.redraw(message.snapshot.strokes);
-        console.log(`[Main] Rendered ${message.snapshot.strokes.length} strokes from room snapshot.`);
-        break;
 
-      case 'user-joined':
+        presenceUI.setLocalUserId(message.userId);
+        presenceUI.setUsers(message.presence);
+        break;
+      }
+
+      case 'user-joined': {
         console.log(`[Main] User joined: ${message.userId} (color: ${message.color})`);
+        presenceUI.addUser(message.userId, message.color);
         break;
+      }
 
-      case 'user-left':
+      case 'user-left': {
         console.log(`[Main] User left: ${message.userId}`);
+        presenceUI.removeUser(message.userId);
+        cursorManager.removeCursor(message.userId);
         break;
+      }
+
+      case 'cursor-move': {
+        const color = presenceUI.getUserColor(message.userId);
+        cursorManager.updateCursor(message.userId, { x: message.x, y: message.y }, color);
+        break;
+      }
 
       case 'stroke-start':
         canvasEngine.startRemoteStroke(
@@ -137,5 +169,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   wsClient.connect();
-  console.log('[Main] Collaborative drawing client initialized.');
+  console.log('[Main] Collaborative drawing client with presence & cursor tracking initialized.');
 });

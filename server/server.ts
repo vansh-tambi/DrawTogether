@@ -232,6 +232,28 @@ wss.on('connection', (ws: WebSocket, req) => {
         break;
       }
 
+      case 'cursor-move': {
+        if (currentRoomId && currentUserId) {
+          const room = rooms.getRoom(currentRoomId);
+          if (room) {
+            const client = room.getClient(currentUserId);
+            if (client) {
+              client.cursor = { x: msg.x, y: msg.y };
+              client.lastActive = Date.now();
+            }
+
+            const cursorMessage: ServerMessage = {
+              type: 'cursor-move',
+              userId: currentUserId,
+              x: msg.x,
+              y: msg.y,
+            };
+            room.broadcast(cursorMessage, currentUserId);
+          }
+        }
+        break;
+      }
+
       case 'undo': {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);

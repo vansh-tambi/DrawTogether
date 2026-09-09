@@ -45,6 +45,9 @@ export class CanvasEngine {
   private isPointerDown = false;
   private activePointerId: number | null = null;
 
+  // In-progress remote strokes (keyed by strokeId)
+  private remoteStrokes: Map<string, { stroke: Stroke; prevPoint: Point; prevMidPoint: Point | null }> = new Map();
+
   // External hooks (for future websocket/ui wiring)
   public onStrokeStart?: (stroke: Stroke) => void;
   public onStrokePoint?: (strokeId: string, point: Point) => void;
@@ -220,6 +223,118 @@ export class CanvasEngine {
   public addStroke(stroke: Stroke): void {
     this.strokes.push(stroke);
     this.renderStroke(stroke);
+  }
+
+  // ==========================================================================
+  // Live Remote Stroke Rendering API
+  // ==========================================================================
+
+  /**
+   * Begins rendering an incoming remote user's stroke live.
+   */
+  public startRemoteStroke(
+    userId: string,
+    id: string,
+    x: number,
+    y: number,
+    color: string,
+    width: number,
+    tool: ToolType
+  ): void {
+    const stroke: Stroke = {
+      id,
+      userId,
+      tool,
+      color,
+      width,
+      points: [{ x, y }],
+    };
+
+    this.remoteStrokes.set(id, {
+      stroke,
+      prevPoint: { x, y },
+      prevMidPoint: null,
+    });
+
+    // Draw initial dot for remote user immediately
+    this.ctx.save();
+    this.ctx.fillStyle = tool === 'eraser' ? CANVAS_BG_COLOR : color;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, width / 2, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  /**
+   * Incrementally draws a remote user's stroke point using quadratic curve smoothing.
+   */
+  public addRemoteStrokePoint(userId: string, strokeId: string, point: Point): void {
+    const active = this.remoteStrokes.get(strokeId);
+    if (!active) return;
+
+    active.stroke.points.push(point);
+
+    this.ctx.save();
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.strokeStyle = active.stroke.tool === 'eraser' ? CANVAS_BG_COLOR : active.stroke.color;
+    this.ctx.lineWidth = active.stroke.width;
+
+    const points = active.stroke.points;
+
+    if (points.length === 2) {
+      const mid = {
+        x: (active.prevPoint.x + point.x) / 2,
+        y: (active.prevPoint.y + point.y) / 2,
+      };
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(active.prevPoint.x, active.prevPoint.y);
+      this.ctx.lineTo(mid.x, mid.y);
+      this.ctx.stroke();
+
+      active.prevMidPoint = mid;
+    } else if (active.prevMidPoint) {
+      const newMid = {
+        x: (active.prevPoint.x + point.x) / 2,
+        y: (active.prevPoint.y + point.y) / 2,
+      };
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(active.prevMidPoint.x, active.prevMidPoint.y);
+      this.ctx.quadraticCurveTo(active.prevPoint.x, active.prevPoint.y, newMid.x, newMid.y);
+      this.ctx.stroke();
+
+      active.prevMidPoint = newMid;
+    }
+
+    this.ctx.restore();
+    active.prevPoint = point;
+  }
+
+  /**
+   * Finalizes a remote user's stroke and stores it into the stroke history.
+   */
+  public endRemoteStroke(userId: string, strokeId: string): void {
+    const active = this.remoteStrokes.get(strokeId);
+    if (!active) return;
+
+    if (active.prevMidPoint && active.prevPoint) {
+      this.ctx.save();
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = active.stroke.tool === 'eraser' ? CANVAS_BG_COLOR : active.stroke.color;
+      this.ctx.lineWidth = active.stroke.width;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(active.prevMidPoint.x, active.prevMidPoint.y);
+      this.ctx.lineTo(active.prevPoint.x, active.prevPoint.y);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    this.strokes.push(active.stroke);
+    this.remoteStrokes.delete(strokeId);
   }
 
   // ==========================================================================

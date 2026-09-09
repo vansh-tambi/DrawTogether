@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { rooms } from './rooms';
 import { drawingState } from './drawing-state';
-import { safeParseClientMessageJson, type ServerMessage } from '../shared/protocol';
+import { safeParseClientMessageJson, type ServerMessage, type Stroke } from '../shared/protocol';
+
+// Map of in-progress strokes keyed by `${roomId}_${strokeId}`
+const activeStrokes = new Map<string, Stroke>();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,6 +145,90 @@ wss.on('connection', (ws: WebSocket, req) => {
           color: client.assignedColor,
         };
         room.broadcast(userJoinedMessage, client.userId);
+        break;
+      }
+
+      case 'stroke-start': {
+        if (currentRoomId && currentUserId) {
+          const room = rooms.getRoom(currentRoomId);
+          if (room) {
+            // Relay to other room participants (excluding sender)
+            const relayedMessage: ServerMessage = {
+              type: 'stroke-start',
+              userId: currentUserId,
+              id: msg.id,
+              x: msg.x,
+              y: msg.y,
+              color: msg.color,
+              width: msg.width,
+              tool: msg.tool,
+            };
+            room.broadcast(relayedMessage, currentUserId);
+
+            // Track active stroke in progress
+            const strokeKey = `${currentRoomId}_${msg.id}`;
+            activeStrokes.set(strokeKey, {
+              id: msg.id,
+              userId: currentUserId,
+              tool: msg.tool,
+              color: msg.color,
+              width: msg.width,
+              points: [{ x: msg.x, y: msg.y }],
+            });
+          }
+        }
+        break;
+      }
+
+      case 'stroke-point': {
+        if (currentRoomId && currentUserId) {
+          const room = rooms.getRoom(currentRoomId);
+          if (room) {
+            // Relay to other room participants (excluding sender)
+            const relayedMessage: ServerMessage = {
+              type: 'stroke-point',
+              userId: currentUserId,
+              strokeId: msg.strokeId,
+              x: msg.x,
+              y: msg.y,
+            };
+            room.broadcast(relayedMessage, currentUserId);
+
+            // Append point to in-progress stroke
+            const strokeKey = `${currentRoomId}_${msg.strokeId}`;
+            const active = activeStrokes.get(strokeKey);
+            if (active) {
+              active.points.push({ x: msg.x, y: msg.y });
+            }
+          }
+        }
+        break;
+      }
+
+      case 'stroke-end': {
+        if (currentRoomId && currentUserId) {
+          const room = rooms.getRoom(currentRoomId);
+          if (room) {
+            // Relay to other room participants (excluding sender)
+            const relayedMessage: ServerMessage = {
+              type: 'stroke-end',
+              userId: currentUserId,
+              strokeId: msg.strokeId,
+            };
+            room.broadcast(relayedMessage, currentUserId);
+
+            // Finalize and persist completed stroke
+            const strokeKey = `${currentRoomId}_${msg.strokeId}`;
+            const active = activeStrokes.get(strokeKey);
+            if (active) {
+              drawingState.recordStroke(currentRoomId, active);
+              activeStrokes.delete(strokeKey);
+              console.log(
+                `[Server] Recorded completed stroke "${active.id}" by "${currentUserId}" in room "${currentRoomId}" (${active.points.length} points).`
+              );
+            }
+          }
+        }
         break;
       }
 

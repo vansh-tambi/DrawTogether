@@ -41,11 +41,11 @@ export class PresenceUI {
   public removeUser(userId: string): void {
     const el = this.container.querySelector(`[data-user-id="${userId}"]`) as HTMLElement;
     if (el) {
-      el.classList.add('user-leaving');
+      el.classList.add('scale-75', 'opacity-0', 'transition-all', 'duration-200');
       setTimeout(() => {
         this.users.delete(userId);
         this.render();
-      }, 160);
+      }, 180);
     } else {
       this.users.delete(userId);
       this.render();
@@ -60,6 +60,14 @@ export class PresenceUI {
     return this.users.size;
   }
 
+  private getInitials(userId: string): string {
+    const clean = userId.replace(/[^a-zA-Z0-9]/g, '');
+    if (clean.length >= 2) {
+      return clean.substring(clean.length - 2).toUpperCase();
+    }
+    return (clean[0] || 'U').toUpperCase();
+  }
+
   private formatShortId(userId: string): string {
     if (userId.length <= 10) return userId;
     return `${userId.substring(0, 8)}…`;
@@ -71,19 +79,59 @@ export class PresenceUI {
       this.onCountChange(count);
     }
 
-    let html = '';
+    const allUsers = Array.from(this.users.values());
+    // Put local user first
+    allUsers.sort((a, b) => {
+      if (a.userId === this.localUserId) return -1;
+      if (b.userId === this.localUserId) return 1;
+      return 0;
+    });
 
-    for (const user of this.users.values()) {
+    const maxVisible = 4;
+    const visibleUsers = allUsers.slice(0, maxVisible);
+    const overflowCount = allUsers.length - maxVisible;
+
+    let html = `<div class="flex items-center -space-x-1.5 hover:space-x-1 transition-all duration-200 py-0.5">`;
+
+    for (const user of visibleUsers) {
       const isLocal = user.userId === this.localUserId;
-      const label = isLocal ? `${this.formatShortId(user.userId)} (You)` : this.formatShortId(user.userId);
+      const initials = this.getInitials(user.userId);
+      const title = isLocal ? `${user.userId} (You)` : user.userId;
 
       html += `
-        <div class="presence-pill ${isLocal ? 'is-local' : ''}" data-user-id="${user.userId}" title="${user.userId}">
-          <span class="avatar-dot" style="background-color: ${user.color};"></span>
-          <span class="avatar-name">${label}</span>
+        <div
+          class="relative group cursor-pointer transition-transform duration-150 hover:scale-115 hover:z-20"
+          data-user-id="${user.userId}"
+          title="${title}"
+        >
+          <div
+            class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-2 ring-white/90 dark:ring-zinc-900/90 select-none transition-shadow"
+            style="background-color: ${user.color};"
+          >
+            ${initials}
+          </div>
+          ${
+            isLocal
+              ? `<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1.5 ring-white" title="You"></span>`
+              : ''
+          }
         </div>
       `;
     }
+
+    if (overflowCount > 0) {
+      const remainingUsers = allUsers.slice(maxVisible).map((u) => u.userId).join(', ');
+      html += `
+        <div
+          class="relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white/90 dark:ring-zinc-900/90 shadow-sm cursor-pointer hover:scale-110 hover:z-20 transition-transform select-none"
+          title="Collaborators: ${remainingUsers}"
+        >
+          +${overflowCount}
+        </div>
+      `;
+    }
+
+    html += `</div>`;
 
     this.container.innerHTML = html;
   }

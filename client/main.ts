@@ -7,22 +7,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvasEngine = initCanvas('canvas');
   const canvasEl = document.getElementById('canvas') as HTMLCanvasElement;
 
-  // DOM Elements
-  const cursorOverlayEl = document.getElementById('cursor-overlay') as HTMLElement;
-  const presenceContainerEl = document.getElementById('presence-container') as HTMLElement;
-  const liveIndicatorEl = document.getElementById('live-indicator') as HTMLElement;
+  // DOM Elements - Top Bar
   const connectionPillEl = document.getElementById('connection-pill') as HTMLElement;
   const connectionTextEl = document.getElementById('connection-text') as HTMLElement;
-  const toastContainerEl = document.getElementById('toast-container') as HTMLElement;
+  const participantCountTextEl = document.getElementById('participant-count-text') as HTMLElement;
+  const presenceContainerEl = document.getElementById('presence-container') as HTMLElement;
+  const btnShare = document.getElementById('btn-share') as HTMLButtonElement;
+  const btnInfo = document.getElementById('btn-info') as HTMLButtonElement;
 
+  // DOM Elements - Floating Dock Tools
   const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
+  const toolHighlighterBtn = document.getElementById('tool-highlighter') as HTMLButtonElement;
   const toolEraserBtn = document.getElementById('tool-eraser') as HTMLButtonElement;
   const toolSegmentEraserBtn = document.getElementById('tool-segment-eraser') as HTMLButtonElement;
+  const toolPanBtn = document.getElementById('tool-pan') as HTMLButtonElement;
+
+  // DOM Elements - Sizing & Palette
+  const sizeDotButtons = document.querySelectorAll('.size-dot-btn');
   const widthSlider = document.getElementById('stroke-width-slider') as HTMLInputElement;
   const widthDotPreview = document.getElementById('width-dot-preview') as HTMLElement;
+  const sizeTooltip = document.getElementById('size-tooltip') as HTMLElement;
   const swatchPalette = document.getElementById('swatch-palette') as HTMLElement;
+  const btnCustomColor = document.getElementById('btn-custom-color') as HTMLButtonElement;
+  const customColorInput = document.getElementById('custom-color-input') as HTMLInputElement;
+
+  // DOM Elements - History & Actions
   const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
   const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
+  const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
+
+  // DOM Elements - Modals & Overlays
+  const modalClear = document.getElementById('modal-clear') as HTMLElement;
+  const btnModalCancel = document.getElementById('btn-modal-cancel') as HTMLButtonElement;
+  const btnModalConfirm = document.getElementById('btn-modal-confirm') as HTMLButtonElement;
+
+  const modalInfo = document.getElementById('modal-info') as HTMLElement;
+  const btnInfoClose = document.getElementById('btn-info-close') as HTMLButtonElement;
+
+  const cursorOverlayEl = document.getElementById('cursor-overlay') as HTMLElement;
+  const toastContainerEl = document.getElementById('toast-container') as HTMLElement;
 
   const cursorManager = new CursorOverlayManager(cursorOverlayEl);
 
@@ -77,12 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 120);
   }
 
-  // Update live indicator based on connected user count
+  // Update participant count in header badge
   presenceUI.onCountChange = (count: number) => {
-    if (count >= 2) {
-      liveIndicatorEl.classList.remove('is-hidden');
-    } else {
-      liveIndicatorEl.classList.add('is-hidden');
+    if (participantCountTextEl) {
+      participantCountTextEl.textContent = count === 1 ? '1 User' : `${count} Users`;
     }
   };
 
@@ -92,95 +113,125 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update Connection Status Pill
   function updateConnectionStatus(state: ConnectionState): void {
-    connectionPillEl.className = 'connection-pill';
+    if (!connectionPillEl || !connectionTextEl) return;
+
+    connectionPillEl.className = 'flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium border shadow-xs transition-colors';
 
     switch (state) {
       case 'connected':
-        connectionPillEl.classList.add('status-connected');
+        connectionPillEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200/60');
         connectionTextEl.textContent = 'Connected';
         break;
       case 'reconnecting':
-        connectionPillEl.classList.add('status-reconnecting');
+        connectionPillEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200/60');
         connectionTextEl.textContent = 'Reconnecting...';
         break;
       case 'connecting':
-        connectionPillEl.classList.add('status-connecting');
+        connectionPillEl.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200/60');
         connectionTextEl.textContent = 'Connecting...';
         break;
       case 'disconnected':
       default:
-        connectionPillEl.classList.add('status-offline');
+        connectionPillEl.classList.add('bg-zinc-100', 'text-zinc-600', 'border-zinc-200');
         connectionTextEl.textContent = 'Offline';
         break;
     }
   }
 
   // ==========================================================================
-  // Toolbar Event Wiring
+  // Toolbar Tool Switching & Mode Handling
   // ==========================================================================
 
-  function updateSizePreview(size: number, color?: string): void {
-    const clampedPx = Math.min(22, Math.max(3, size));
+  const allToolButtons = [
+    toolBrushBtn,
+    toolHighlighterBtn,
+    toolEraserBtn,
+    toolSegmentEraserBtn,
+    toolPanBtn,
+  ];
+
+  function setActiveTool(tool: 'brush' | 'highlighter' | 'eraser' | 'segment-eraser' | 'pan'): void {
+    canvasEngine.setTool(tool);
+
+    allToolButtons.forEach((btn) => btn.classList.remove('is-active'));
+    canvasEl.classList.toggle('is-segment-eraser', tool === 'segment-eraser');
+    canvasEl.classList.toggle('is-pan-tool', tool === 'pan');
+
+    switch (tool) {
+      case 'brush':
+        toolBrushBtn.classList.add('is-active');
+        break;
+      case 'highlighter':
+        toolHighlighterBtn.classList.add('is-active');
+        break;
+      case 'eraser':
+        toolEraserBtn.classList.add('is-active');
+        break;
+      case 'segment-eraser':
+        toolSegmentEraserBtn.classList.add('is-active');
+        break;
+      case 'pan':
+        toolPanBtn.classList.add('is-active');
+        break;
+    }
+  }
+
+  toolBrushBtn.addEventListener('click', () => setActiveTool('brush'));
+  toolHighlighterBtn.addEventListener('click', () => setActiveTool('highlighter'));
+  toolEraserBtn.addEventListener('click', () => setActiveTool('eraser'));
+  toolSegmentEraserBtn.addEventListener('click', () => setActiveTool('segment-eraser'));
+  toolPanBtn.addEventListener('click', () => setActiveTool('pan'));
+
+  // ==========================================================================
+  // Stroke Width & Quick Preset Radio Dots
+  // ==========================================================================
+
+  function updateSizeUI(size: number, color?: string): void {
+    const clampedPx = Math.min(22, Math.max(2, size));
     widthDotPreview.style.width = `${clampedPx}px`;
     widthDotPreview.style.height = `${clampedPx}px`;
     if (color) {
       widthDotPreview.style.backgroundColor = color;
     }
+
+    widthSlider.value = size.toString();
+    widthSlider.title = `Brush size: ${size}px`;
+    if (sizeTooltip) {
+      sizeTooltip.textContent = `Brush: ${size}pt`;
+    }
+
+    // Update preset dots active state
+    sizeDotButtons.forEach((btn) => {
+      const dotSize = parseInt(btn.getAttribute('data-size') || '0', 10);
+      if (dotSize === size) {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    });
   }
 
-  // Tool Selection
-  toolBrushBtn.addEventListener('click', () => {
-    canvasEngine.setTool('brush');
-    canvasEl.classList.remove('is-segment-eraser');
-    toolBrushBtn.classList.add('is-active');
-    toolEraserBtn.classList.remove('is-active');
-    toolSegmentEraserBtn.classList.remove('is-active');
-  });
-
-  toolEraserBtn.addEventListener('click', () => {
-    canvasEngine.setTool('eraser');
-    canvasEl.classList.remove('is-segment-eraser');
-    toolEraserBtn.classList.add('is-active');
-    toolBrushBtn.classList.remove('is-active');
-    toolSegmentEraserBtn.classList.remove('is-active');
-  });
-
-  toolSegmentEraserBtn.addEventListener('click', () => {
-    canvasEngine.setTool('segment-eraser');
-    canvasEl.classList.add('is-segment-eraser');
-    toolSegmentEraserBtn.classList.add('is-active');
-    toolBrushBtn.classList.remove('is-active');
-    toolEraserBtn.classList.remove('is-active');
-  });
-
-  // Stroke Width
-  widthSlider.addEventListener('input', (e) => {
-    const val = parseInt((e.target as HTMLInputElement).value, 10);
-    canvasEngine.setWidth(val);
-    updateSizePreview(val);
-  });
-
-  // Curated Color Swatches
-  const swatchButtons = swatchPalette.querySelectorAll('.swatch-btn');
-  swatchButtons.forEach((btn) => {
+  sizeDotButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const color = btn.getAttribute('data-color');
-      if (!color) return;
-
-      swatchButtons.forEach((b) => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-
-      canvasEngine.setColor(color);
-      updateSizePreview(canvasEngine.getWidth(), color);
-
-      // Auto-activate brush tool if eraser or segment eraser was active
-      if (canvasEngine.getTool() !== 'brush') {
-        toolBrushBtn.click();
-      }
+      const val = parseInt(btn.getAttribute('data-size') || '4', 10);
+      canvasEngine.setWidth(val);
+      updateSizeUI(val, canvasEngine.getColor());
     });
   });
 
-  function selectColorSwatch(color: string): void {
+  widthSlider.addEventListener('input', (e) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    canvasEngine.setWidth(val);
+    updateSizeUI(val, canvasEngine.getColor());
+  });
+
+  // ==========================================================================
+  // Curated Color Swatches & Custom Color Picker
+  // ==========================================================================
+
+  const swatchButtons = swatchPalette.querySelectorAll('.swatch-btn');
+
+  function selectColor(color: string): void {
     let found = false;
     swatchButtons.forEach((btn) => {
       if (btn.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()) {
@@ -190,13 +241,38 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.remove('is-active');
       }
     });
-    if (!found) {
-      canvasEngine.setColor(color);
+
+    canvasEngine.setColor(color);
+    updateSizeUI(canvasEngine.getWidth(), color);
+
+    // Auto-switch to pen/brush if currently in an eraser mode
+    const currentTool = canvasEngine.getTool();
+    if (currentTool === 'eraser' || currentTool === 'segment-eraser' || currentTool === 'pan') {
+      setActiveTool('brush');
     }
-    updateSizePreview(canvasEngine.getWidth(), color);
   }
 
-  // Undo / Redo with transient busy flash
+  swatchButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const color = btn.getAttribute('data-color');
+      if (color) selectColor(color);
+    });
+  });
+
+  // Custom Color Picker Button
+  btnCustomColor.addEventListener('click', () => {
+    customColorInput.click();
+  });
+
+  customColorInput.addEventListener('input', (e) => {
+    const val = (e.target as HTMLInputElement).value;
+    selectColor(val);
+  });
+
+  // ==========================================================================
+  // History Actions (Undo, Redo, Clear Board)
+  // ==========================================================================
+
   let undoTimeout: ReturnType<typeof setTimeout> | null = null;
   let redoTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -214,28 +290,109 @@ document.addEventListener('DOMContentLoaded', () => {
     redoTimeout = setTimeout(() => btnRedo.classList.remove('is-busy'), 600);
   });
 
-  // Keyboard Shortcuts
+  // Clear Canvas Modal Dialog
+  btnClear.addEventListener('click', () => {
+    modalClear.classList.add('modal-open');
+  });
+
+  btnModalCancel.addEventListener('click', () => {
+    modalClear.classList.remove('modal-open');
+  });
+
+  btnModalConfirm.addEventListener('click', () => {
+    modalClear.classList.remove('modal-open');
+    triggerCanvasRedrawBlend();
+    canvasEngine.clearAllStrokes();
+    showToast('Board cleared');
+  });
+
+  // Share Link Action
+  btnShare.addEventListener('click', async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast('Room link copied to clipboard!');
+      } else {
+        showToast(`Room: ${roomId}`);
+      }
+    } catch {
+      showToast(`Room: ${roomId}`);
+    }
+  });
+
+  // Info / Shortcuts Modal
+  btnInfo.addEventListener('click', () => {
+    modalInfo.classList.add('modal-open');
+  });
+
+  btnInfoClose.addEventListener('click', () => {
+    modalInfo.classList.remove('modal-open');
+  });
+
+  modalInfo.addEventListener('click', (e) => {
+    if (e.target === modalInfo) {
+      modalInfo.classList.remove('modal-open');
+    }
+  });
+
+  modalClear.addEventListener('click', (e) => {
+    if (e.target === modalClear) {
+      modalClear.classList.remove('modal-open');
+    }
+  });
+
+  // ==========================================================================
+  // Comprehensive Keyboard Shortcuts
+  // ==========================================================================
+
   window.addEventListener('keydown', (e) => {
+    // Escape closes modals
+    if (e.key === 'Escape') {
+      modalClear.classList.remove('modal-open');
+      modalInfo.classList.remove('modal-open');
+      return;
+    }
+
+    const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+    if (isCtrlOrMeta && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        btnRedo.click();
+      } else {
+        btnUndo.click();
+      }
+      return;
+    }
+
+    if (isCtrlOrMeta && (e.key === 'y' || e.key === 'Y')) {
+      e.preventDefault();
+      btnRedo.click();
+      return;
+    }
+
     if (e.key === 'b' || e.key === 'B') {
-      toolBrushBtn.click();
+      setActiveTool('brush');
+    } else if (e.key === 'h' || e.key === 'H') {
+      setActiveTool('highlighter');
     } else if (e.key === 'e' || e.key === 'E') {
-      toolEraserBtn.click();
+      setActiveTool('eraser');
     } else if (e.key === 'x' || e.key === 'X') {
-      toolSegmentEraserBtn.click();
+      setActiveTool('segment-eraser');
+    } else if (e.key === 'v' || e.key === 'V' || e.key === 'p' || e.key === 'P') {
+      setActiveTool('pan');
     } else if (e.key === 'u' || e.key === 'U') {
       btnUndo.click();
     } else if (e.key === 'r' || e.key === 'R') {
       btnRedo.click();
-    } else if (e.key === '+') {
+    } else if (e.key === ']' || e.key === '+') {
       const next = Math.min(36, canvasEngine.getWidth() + 2);
-      widthSlider.value = next.toString();
       canvasEngine.setWidth(next);
-      updateSizePreview(next);
-    } else if (e.key === '-') {
+      updateSizeUI(next, canvasEngine.getColor());
+    } else if (e.key === '[' || e.key === '-') {
       const next = Math.max(1, canvasEngine.getWidth() - 2);
-      widthSlider.value = next.toString();
       canvasEngine.setWidth(next);
-      updateSizePreview(next);
+      updateSizeUI(next, canvasEngine.getColor());
     }
   });
 
@@ -312,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
       switch (message.type) {
         case 'welcome': {
           canvasEngine.setColor(message.assignedColor);
-          selectColorSwatch(message.assignedColor);
+          selectColor(message.assignedColor);
 
           // Authoritative reset from fresh server snapshot
           cursorManager.clear();
@@ -407,8 +564,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Initial preview state
-  updateSizePreview(canvasEngine.getWidth(), canvasEngine.getColor());
+  updateSizeUI(canvasEngine.getWidth(), canvasEngine.getColor());
 
   wsClient.connect();
-  console.log('[Main] Modern Studio client with motion and feedback initialized.');
+  console.log('[Main] Modern Studio glassmorphic whiteboard client initialized.');
 });

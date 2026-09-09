@@ -113,19 +113,19 @@ export class CursorOverlayManager {
 
   private createCursorElement(userId: string, color: string): HTMLElement {
     const wrapper = document.createElement('div');
-    wrapper.className = 'remote-cursor cursor-entering';
+    wrapper.className = 'remote-cursor cursor-entering pointer-events-none absolute top-0 left-0 z-40 select-none';
     wrapper.id = `cursor-${userId}`;
 
     setTimeout(() => {
       wrapper.classList.remove('cursor-entering');
     }, 250);
 
-    // Inline SVG cursor icon styled with user color
+    // Modern sleek SVG cursor arrow with drop-shadow and glass pill label
     wrapper.innerHTML = `
-      <svg class="cursor-pointer" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+      <svg class="cursor-pointer drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 3L19.5 12L12 14.25L9 21L4 3Z" fill="${color}" stroke="#ffffff" stroke-width="1.75" stroke-linejoin="round"/>
       </svg>
-      <div class="cursor-label" style="background-color: ${color};">
+      <div class="cursor-label px-2 py-0.5 rounded-full text-[11px] font-medium text-white shadow-sm ring-1 ring-white/40 tracking-tight" style="background-color: ${color};">
         ${this.formatShortId(userId)}
       </div>
     `;

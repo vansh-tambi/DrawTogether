@@ -8,7 +8,7 @@ export const CANVAS_BG_COLOR = '#faf9f5';
 
 export interface CanvasEngineOptions {
   canvas: HTMLCanvasElement;
-  tool?: 'brush' | 'eraser' | 'segment-eraser';
+  tool?: 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan';
   color?: string;
   width?: number;
   userId?: string;
@@ -25,16 +25,16 @@ export interface CanvasEngineOptions {
  * - Quadratic bezier midpoint interpolation for fluid, smooth curves
  * - Unified pointer events (mouse, touch, stylus)
  * - Single canvas with incremental segment drawing (zero full-canvas redraws during drawing)
- * - Off-white paper background rendering
+ * - Off-white paper background rendering with architect dot grid
  * - Full redraw/replay API for undo/redo and synchronization
- * - Zero networking dependencies
+ * - Support for Pen, Brush, Highlighter (multiply alpha), Eraser, Segment Eraser, and Pan modes
  */
 export class CanvasEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
 
   // Drawing settings
-  private currentTool: 'brush' | 'eraser' | 'segment-eraser' = 'brush';
+  private currentTool: 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan' = 'brush';
   private currentColor = '#2563eb';
   private currentWidth = 4;
   private userId: string;
@@ -101,11 +101,11 @@ export class CanvasEngine {
   // Configuration API
   // ==========================================================================
 
-  public setTool(tool: 'brush' | 'eraser' | 'segment-eraser'): void {
+  public setTool(tool: 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan'): void {
     this.currentTool = tool;
   }
 
-  public getTool(): 'brush' | 'eraser' | 'segment-eraser' {
+  public getTool(): 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan' {
     return this.currentTool;
   }
 
@@ -140,7 +140,7 @@ export class CanvasEngine {
   // ==========================================================================
 
   /**
-   * Clears the canvas to the paper background tone.
+   * Clears the canvas and renders the modern architect dot-grid paper background.
    */
   public clearCanvas(): void {
     const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
@@ -150,7 +150,25 @@ export class CanvasEngine {
     this.ctx.save();
     this.ctx.fillStyle = CANVAS_BG_COLOR;
     this.ctx.fillRect(0, 0, width, height);
+
+    // Subtle architect / whiteboard dot grid
+    this.ctx.fillStyle = '#E5E3DC';
+    const spacing = 28;
+    const dotRadius = 1;
+    for (let x = spacing; x < width; x += spacing) {
+      for (let y = spacing; y < height; y += spacing) {
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    }
+
     this.ctx.restore();
+  }
+
+  public clearAllStrokes(): void {
+    this.strokes = [];
+    this.clearCanvas();
   }
 
   /**
@@ -167,16 +185,22 @@ export class CanvasEngine {
     if (tool === 'eraser') {
       this.ctx.strokeStyle = CANVAS_BG_COLOR;
       this.ctx.fillStyle = CANVAS_BG_COLOR;
+      this.ctx.lineWidth = width;
+    } else if (tool === 'highlighter') {
+      this.ctx.globalAlpha = 0.35;
+      this.ctx.strokeStyle = color;
+      this.ctx.fillStyle = color;
+      this.ctx.lineWidth = width * 2.2;
     } else {
       this.ctx.strokeStyle = color;
       this.ctx.fillStyle = color;
+      this.ctx.lineWidth = width;
     }
-    this.ctx.lineWidth = width;
 
     // Single point: render a circular dot
     if (points.length === 1) {
       this.ctx.beginPath();
-      this.ctx.arc(points[0].x, points[0].y, width / 2, 0, Math.PI * 2);
+      this.ctx.arc(points[0].x, points[0].y, (tool === 'highlighter' ? width * 2.2 : width) / 2, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.restore();
       return;
@@ -410,6 +434,12 @@ export class CanvasEngine {
       return;
     }
 
+    if (this.currentTool === 'pan') {
+      this.isPointerDown = true;
+      this.activePointerId = e.pointerId;
+      return;
+    }
+
     this.isPointerDown = true;
     this.activePointerId = e.pointerId;
 
@@ -422,12 +452,19 @@ export class CanvasEngine {
     const startPoint = this.getCoordinates(e);
     const strokeId = `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
+    let computedWidth = this.currentWidth;
+    if (this.currentTool === 'eraser') {
+      computedWidth = this.currentWidth * 2.5;
+    } else if (this.currentTool === 'highlighter') {
+      computedWidth = this.currentWidth * 2.2;
+    }
+
     this.activeStroke = {
       id: strokeId,
       userId: this.userId,
       tool: this.currentTool,
       color: this.currentColor,
-      width: this.currentTool === 'eraser' ? this.currentWidth * 2.5 : this.currentWidth,
+      width: computedWidth,
       points: [startPoint],
     };
 
@@ -436,7 +473,15 @@ export class CanvasEngine {
 
     // Draw initial dot immediately
     this.ctx.save();
-    this.ctx.fillStyle = this.currentTool === 'eraser' ? CANVAS_BG_COLOR : this.currentColor;
+    if (this.currentTool === 'eraser') {
+      this.ctx.fillStyle = CANVAS_BG_COLOR;
+    } else if (this.currentTool === 'highlighter') {
+      this.ctx.globalAlpha = 0.35;
+      this.ctx.fillStyle = this.currentColor;
+    } else {
+      this.ctx.fillStyle = this.currentColor;
+    }
+
     this.ctx.beginPath();
     this.ctx.arc(startPoint.x, startPoint.y, this.activeStroke.width / 2, 0, Math.PI * 2);
     this.ctx.fill();
@@ -468,7 +513,14 @@ export class CanvasEngine {
     this.ctx.save();
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
-    this.ctx.strokeStyle = this.activeStroke.tool === 'eraser' ? CANVAS_BG_COLOR : this.activeStroke.color;
+    if (this.activeStroke.tool === 'eraser') {
+      this.ctx.strokeStyle = CANVAS_BG_COLOR;
+    } else if (this.activeStroke.tool === 'highlighter') {
+      this.ctx.globalAlpha = 0.35;
+      this.ctx.strokeStyle = this.activeStroke.color;
+    } else {
+      this.ctx.strokeStyle = this.activeStroke.color;
+    }
     this.ctx.lineWidth = this.activeStroke.width;
 
     const points = this.activeStroke.points;
@@ -510,6 +562,12 @@ export class CanvasEngine {
   }
 
   private handlePointerUp(e: PointerEvent): void {
+    if (this.currentTool === 'pan') {
+      this.isPointerDown = false;
+      this.activePointerId = null;
+      return;
+    }
+
     if (!this.isPointerDown || !this.activeStroke || this.activePointerId !== e.pointerId) {
       return;
     }
@@ -531,7 +589,14 @@ export class CanvasEngine {
       this.ctx.save();
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
-      this.ctx.strokeStyle = this.activeStroke.tool === 'eraser' ? CANVAS_BG_COLOR : this.activeStroke.color;
+      if (this.activeStroke.tool === 'eraser') {
+        this.ctx.strokeStyle = CANVAS_BG_COLOR;
+      } else if (this.activeStroke.tool === 'highlighter') {
+        this.ctx.globalAlpha = 0.35;
+        this.ctx.strokeStyle = this.activeStroke.color;
+      } else {
+        this.ctx.strokeStyle = this.activeStroke.color;
+      }
       this.ctx.lineWidth = this.activeStroke.width;
 
       this.ctx.beginPath();

@@ -1,75 +1,36 @@
+@import "tailwindcss";
+
 /* ==========================================================================
-   DrawTogether "Modern Studio" Design System
+   Design System Tokens & Root
    ========================================================================== */
 
 :root {
-  /* Brand & Core Color Tokens */
-  --color-canvas-bg: #FAF7F2;
+  --color-canvas-bg: #F9F9F8;
   --color-primary: #5B4FE9;
-  --color-primary-hover: #4B3ED6;
   --color-primary-light: rgba(91, 79, 233, 0.12);
   --color-accent: #FF6B5E;
-  --color-accent-light: rgba(255, 107, 94, 0.14);
   --color-ink: #1F1B2E;
-  --color-ink-muted: #6B667C;
-  --color-ink-subtle: #9B98A6;
 
-  /* Neutrals & Surfaces */
-  --color-surface: rgba(255, 255, 255, 0.9);
-  --color-surface-translucent: rgba(255, 255, 255, 0.75);
-  --color-border: rgba(31, 27, 46, 0.08);
-  --color-border-subtle: rgba(31, 27, 46, 0.04);
-  --color-border-focus: rgba(91, 79, 233, 0.35);
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(31, 27, 46, 0.06), 0 1px 2px rgba(31, 27, 46, 0.04);
-  --shadow-md: 0 4px 14px -2px rgba(31, 27, 46, 0.08), 0 2px 6px -1px rgba(31, 27, 46, 0.04);
-  --shadow-float: 0 14px 34px -4px rgba(31, 27, 46, 0.12), 0 4px 12px -2px rgba(31, 27, 46, 0.06);
-
-  /* Typography */
-  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-  /* Spacing Scale (4px base) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-
-  /* Border Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-round: 9999px;
-
-  /* Transitions */
-  --transition-fast: 160ms ease-out;
-  --transition-normal: 220ms ease-out;
+  --shadow-dock: 0 20px 50px -10px rgba(0, 0, 0, 0.08), 0 10px 20px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 /* ==========================================================================
-   CSS Reset & Base
+   Canvas & Viewport
    ========================================================================== */
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
 
 html, body {
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   background-color: var(--color-canvas-bg);
-  color: var(--color-ink);
   font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 canvas#canvas {
@@ -84,438 +45,149 @@ canvas#canvas {
 }
 
 canvas#canvas.canvas-fade-blend {
-  opacity: 0.92;
+  opacity: 0.93;
 }
 
 canvas#canvas.is-segment-eraser {
   cursor: crosshair;
 }
 
-/* ==========================================================================
-   Header & Wordmark (Top-Left)
-   ========================================================================== */
-
-.app-header {
-  position: absolute;
-  top: var(--space-4);
-  left: var(--space-5);
-  z-index: 100;
-  pointer-events: auto;
+canvas#canvas.is-pan-tool {
+  cursor: grab;
 }
 
-.brand-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 6px 14px;
-  background: var(--color-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  box-shadow: var(--shadow-sm);
-  user-select: none;
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-primary);
-  line-height: 1;
-}
-
-.live-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  background: var(--color-accent-light);
-  border-radius: var(--radius-round);
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-}
-
-.live-indicator.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.85);
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-accent);
-  box-shadow: 0 0 8px var(--color-accent);
-  animation: pulseCoral 2s infinite ease-out;
-}
-
-.live-label {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--color-accent);
-}
-
-@keyframes pulseCoral {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 107, 94, 0.7); }
-  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(255, 107, 94, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 107, 94, 0); }
+canvas#canvas.is-pan-tool:active {
+  cursor: grabbing;
 }
 
 /* ==========================================================================
-   Top-Right Cluster (Status Pill & Presence Strip)
+   Dock Buttons & Micro-Interactions
    ========================================================================== */
 
-.top-right-cluster {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-5);
-  z-index: 100;
+.dock-btn {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  pointer-events: auto;
-}
-
-/* Connection Status Pill */
-.connection-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  background: var(--color-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  box-shadow: var(--shadow-sm);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-ink-muted);
-  transition: all var(--transition-normal);
-  user-select: none;
-}
-
-.connection-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: #94a3b8;
-  transition: background-color var(--transition-fast);
-}
-
-.connection-pill.status-connected .connection-dot {
-  background-color: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
-}
-
-.connection-pill.status-reconnecting {
-  border-color: rgba(255, 107, 94, 0.3);
-  background: var(--color-accent-light);
-}
-
-.connection-pill.status-reconnecting .connection-dot {
-  background-color: var(--color-accent);
-  animation: pulseReconnecting 1.2s infinite ease-out;
-}
-
-.connection-pill.status-reconnecting .connection-text {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-
-.connection-pill.status-offline .connection-dot {
-  background-color: #ef4444;
-}
-
-@keyframes pulseReconnecting {
-  0% { transform: scale(0.9); opacity: 0.6; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.6; }
-}
-
-/* Presence Strip */
-.presence-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.presence-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 8px;
-  background: var(--color-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  box-shadow: var(--shadow-sm);
-  animation: userEnter 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: transform var(--transition-fast), opacity var(--transition-fast);
-  user-select: none;
-}
-
-.presence-pill.user-leaving {
-  animation: userLeave 180ms ease-out forwards;
-}
-
-@keyframes userEnter {
-  0% { opacity: 0; transform: translateY(-6px) scale(0.92); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes userLeave {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-6px) scale(0.92); }
-}
-
-.presence-pill.is-local {
-  border-color: var(--color-primary-light);
-  background: rgba(91, 79, 233, 0.08);
-}
-
-.avatar-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
-}
-
-.avatar-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-ink);
-  white-space: nowrap;
-}
-
-/* ==========================================================================
-   Floating Pill Toolbar (Bottom-Center)
-   ========================================================================== */
-
-.studio-toolbar {
-  position: absolute;
-  bottom: var(--space-6);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 6px 10px;
-  background: var(--color-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  box-shadow: var(--shadow-float);
-  pointer-events: auto;
-  user-select: none;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 22px;
-  background-color: var(--color-border);
-}
-
-/* Toolbar Buttons */
-.toolbar-btn {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-round);
-  border: none;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: #4B5563;
   background: transparent;
-  color: var(--color-ink-muted);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 150ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
-.toolbar-btn:hover {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  transform: scale(1.06);
+.dock-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+  transform: scale(1.08);
 }
 
-.toolbar-btn:active {
+.dock-btn:active {
   transform: scale(0.94);
 }
 
-.toolbar-btn.is-active {
-  background: var(--color-primary);
+.dock-btn.is-active {
+  background: #5B4FE9;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(91, 79, 233, 0.35);
+  box-shadow: 0 4px 12px rgba(91, 79, 233, 0.35);
+  transform: scale(1.05);
 }
 
-.toolbar-btn.is-busy {
-  opacity: 0.5;
+.dock-btn.is-active:hover {
+  background: #4C3DD8;
+  color: #ffffff;
+}
+
+.dock-btn.is-busy {
+  opacity: 0.4;
   pointer-events: none;
   transform: scale(0.92);
-  filter: brightness(0.92);
-  transition: all var(--transition-fast);
 }
 
-/* Accessibility Focus Rings */
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+.dock-btn.is-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
-/* Stroke Width Group */
-.width-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-1);
-}
-
-.width-preview-wrapper {
-  width: 28px;
-  height: 28px;
+/* Size Preset Radio Dots */
+.size-dot-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(31, 27, 46, 0.04);
-  border-radius: 50%;
-}
-
-.width-dot-preview {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: var(--color-ink);
-  transition: width var(--transition-fast), height var(--transition-fast), background-color var(--transition-fast);
-}
-
-.width-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 72px;
-  height: 4px;
-  border-radius: var(--radius-round);
-  background: rgba(31, 27, 46, 0.12);
-  outline: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
   cursor: pointer;
+  transition: all 140ms ease-out;
 }
 
-.width-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  transition: transform var(--transition-fast);
+.size-dot-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: scale(1.1);
 }
 
-.width-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+.size-dot-btn.is-active {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transform: scale(1.08);
 }
 
-.width-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  transition: transform var(--transition-fast);
+.size-dot-btn.is-active span {
+  background-color: #5B4FE9 !important;
 }
 
-/* Swatch Palette */
-.swatch-palette {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+/* Range Slider Dynamic Readout */
+.group\/slider:hover #size-tooltip,
+#stroke-width-slider:active ~ #size-tooltip {
+  opacity: 1;
 }
 
+/* Curated Swatch Buttons */
 .swatch-btn {
+  position: relative;
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  border: 1.5px solid #ffffff;
   background-color: var(--swatch-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  outline: none;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  position: relative;
+  transition: transform 150ms cubic-bezier(0.2, 0, 0.2, 1), box-shadow 150ms ease-out;
 }
 
 .swatch-btn:hover {
-  transform: scale(1.18);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  transform: scale(1.2);
+  z-index: 10;
+}
+
+.swatch-btn:active {
+  transform: scale(0.95);
 }
 
 .swatch-btn.is-active {
-  transform: scale(1.28);
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--swatch-color);
-  z-index: 2;
+  transform: scale(1.22);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #5B4FE9, 0 2px 8px rgba(91, 79, 233, 0.3);
+  z-index: 10;
 }
 
 /* ==========================================================================
-   Remote Cursor Overlay
+   Multiplayer Cursors
    ========================================================================== */
 
-.cursor-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 90;
-}
-
 .remote-cursor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
   will-change: transform;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  transition: opacity var(--transition-fast);
-}
-
-.cursor-pointer {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-}
-
-.cursor-label {
-  margin-left: 14px;
-  margin-top: -6px;
-  padding: 2px 7px;
-  border-radius: var(--radius-round);
-  color: #ffffff;
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  transition: opacity 180ms ease-out;
 }
 
 .remote-cursor.cursor-entering {
-  animation: cursorPop 240ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: cursorPop 240ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes cursorPop {
@@ -523,8 +195,7 @@ input:focus-visible {
     opacity: 0;
     transform: scale(0.3);
   }
-  65% {
-    opacity: 1;
+  70% {
     transform: scale(1.15);
   }
   100% {
@@ -533,100 +204,79 @@ input:focus-visible {
   }
 }
 
-/* ==========================================================================
-   Toast / Snackbar Stack (Stacked above toolbar)
-   ========================================================================== */
-
-.toast-container {
+.cursor-label {
   position: absolute;
-  bottom: calc(var(--space-6) + 54px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 150;
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: center;
-  gap: var(--space-2);
-  pointer-events: none;
+  left: 18px;
+  top: 18px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
+/* ==========================================================================
+   Toast Notifications (Top-Right Slide-In)
+   ========================================================================== */
+
 .toast-card {
-  pointer-events: auto;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 6px 14px;
-  background: var(--color-surface);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-round);
-  box-shadow: var(--shadow-md);
-  font-size: 12.5px;
+  space-x: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  color: #1F1B2E;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--color-ink);
-  user-select: none;
-  animation: toastEnter 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: opacity 180ms ease-out, transform 180ms ease-out;
+  pointer-events: auto;
+  animation: toastSlideIn 200ms cubic-bezier(0.2, 0, 0.2, 1) forwards;
 }
 
 .toast-card.toast-leaving {
-  opacity: 0;
-  transform: translateY(8px) scale(0.94);
-}
-
-@keyframes toastEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.92);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  animation: toastSlideOut 180ms ease-in forwards;
 }
 
 .toast-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  margin-right: 6px;
   flex-shrink: 0;
-  background-color: var(--color-primary);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px) scale(0.92);
+  }
 }
 
 /* ==========================================================================
-   Responsive Breakpoints
+   Modals
    ========================================================================== */
 
-@media (max-width: 768px) {
-  .app-header {
-    top: var(--space-2);
-    left: var(--space-2);
-  }
+.modal-open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
 
-  .top-right-cluster {
-    top: var(--space-2);
-    right: var(--space-2);
-  }
-
-  .studio-toolbar {
-    bottom: var(--space-3);
-    padding: 5px 8px;
-    gap: var(--space-2);
-    max-width: calc(100vw - 24px);
-    overflow-x: auto;
-  }
-
-  .width-slider {
-    width: 52px;
-  }
-
-  .swatch-palette {
-    gap: 4px;
-  }
-
-  .swatch-btn {
-    width: 20px;
-    height: 20px;
-  }
+.modal-open > div {
+  transform: scale(1) !important;
 }

@@ -27,9 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const widthSlider = document.getElementById('stroke-width-slider') as HTMLInputElement;
   const widthDotPreview = document.getElementById('width-dot-preview') as HTMLElement;
   const sizeTooltip = document.getElementById('size-tooltip') as HTMLElement;
-  const swatchPalette = document.getElementById('swatch-palette') as HTMLElement;
+  const sizeReadout = document.getElementById('size-readout') as HTMLElement;
   const btnCustomColor = document.getElementById('btn-custom-color') as HTMLButtonElement;
   const customColorInput = document.getElementById('custom-color-input') as HTMLInputElement;
+
+  // DOM Elements - Color Tabs
+  const tabPrimary = document.getElementById('tab-primary') as HTMLButtonElement;
+  const tabPastel = document.getElementById('tab-pastel') as HTMLButtonElement;
+  const swatchGridPrimary = document.getElementById('swatch-grid-primary') as HTMLElement;
+  const swatchGridPastel = document.getElementById('swatch-grid-pastel') as HTMLElement;
 
   // DOM Elements - History & Actions
   const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
@@ -100,10 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 120);
   }
 
-  // Update participant count in header badge
+  // Update participant count in header badge (parenthesized format)
   presenceUI.onCountChange = (count: number) => {
     if (participantCountTextEl) {
-      participantCountTextEl.textContent = count === 1 ? '1 User' : `${count} Users`;
+      participantCountTextEl.textContent = count === 1 ? '(1 User)' : `(${count} Users)`;
     }
   };
 
@@ -115,28 +121,50 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateConnectionStatus(state: ConnectionState): void {
     if (!connectionPillEl || !connectionTextEl) return;
 
-    connectionPillEl.className = 'flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium border shadow-xs transition-colors';
+    // Reset dynamic classes on the pill
+    connectionPillEl.className = 'flex items-center space-x-2.5 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border shadow-sm transition-colors';
 
     switch (state) {
       case 'connected':
-        connectionPillEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200/60');
+        connectionPillEl.classList.add('bg-white/50', 'border-white/40', 'text-zinc-700');
         connectionTextEl.textContent = 'Connected';
         break;
       case 'reconnecting':
-        connectionPillEl.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200/60');
+        connectionPillEl.classList.add('bg-amber-50/60', 'border-amber-200/40', 'text-amber-700');
         connectionTextEl.textContent = 'Reconnecting...';
         break;
       case 'connecting':
-        connectionPillEl.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200/60');
+        connectionPillEl.classList.add('bg-blue-50/60', 'border-blue-200/40', 'text-blue-700');
         connectionTextEl.textContent = 'Connecting...';
         break;
       case 'disconnected':
       default:
-        connectionPillEl.classList.add('bg-zinc-100', 'text-zinc-600', 'border-zinc-200');
+        connectionPillEl.classList.add('bg-zinc-100/60', 'border-zinc-200/40', 'text-zinc-600');
         connectionTextEl.textContent = 'Offline';
         break;
     }
   }
+
+  // ==========================================================================
+  // Color Tab Switching (Primary / Pastel)
+  // ==========================================================================
+
+  function switchColorTab(tab: 'primary' | 'pastel'): void {
+    if (tab === 'primary') {
+      tabPrimary.classList.add('is-active');
+      tabPastel.classList.remove('is-active');
+      swatchGridPrimary.classList.remove('hidden');
+      swatchGridPastel.classList.add('hidden');
+    } else {
+      tabPastel.classList.add('is-active');
+      tabPrimary.classList.remove('is-active');
+      swatchGridPastel.classList.remove('hidden');
+      swatchGridPrimary.classList.add('hidden');
+    }
+  }
+
+  tabPrimary.addEventListener('click', () => switchColorTab('primary'));
+  tabPastel.addEventListener('click', () => switchColorTab('pastel'));
 
   // ==========================================================================
   // Toolbar Tool Switching & Mode Handling
@@ -199,6 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sizeTooltip) {
       sizeTooltip.textContent = `Brush: ${size}pt`;
     }
+    // Update the below-slider dynamic readout
+    if (sizeReadout) {
+      sizeReadout.textContent = `Brush Size: ${size}pt`;
+    }
 
     // Update preset dots active state
     sizeDotButtons.forEach((btn) => {
@@ -229,9 +261,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Curated Color Swatches & Custom Color Picker
   // ==========================================================================
 
-  const swatchButtons = swatchPalette.querySelectorAll('.swatch-btn');
+  // Collect all swatch buttons from both grids
+  function getAllSwatchButtons(): NodeListOf<Element> {
+    return document.querySelectorAll('.swatch-btn');
+  }
 
   function selectColor(color: string): void {
+    const swatchButtons = getAllSwatchButtons();
     let found = false;
     swatchButtons.forEach((btn) => {
       if (btn.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()) {
@@ -252,12 +288,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  swatchButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const color = btn.getAttribute('data-color');
-      if (color) selectColor(color);
+  // Attach click handlers to all swatch buttons (both grids)
+  function bindSwatchListeners(): void {
+    const swatchButtons = getAllSwatchButtons();
+    swatchButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        if (color) selectColor(color);
+      });
     });
-  });
+  }
+
+  bindSwatchListeners();
 
   // Custom Color Picker Button
   btnCustomColor.addEventListener('click', () => {
@@ -567,5 +609,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSizeUI(canvasEngine.getWidth(), canvasEngine.getColor());
 
   wsClient.connect();
-  console.log('[Main] Modern Studio glassmorphic whiteboard client initialized.');
+  console.log('[Main] Heavy glassmorphic DrawTogether whiteboard client initialized.');
 });

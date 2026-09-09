@@ -120,17 +120,30 @@ export class CursorOverlayManager {
       wrapper.classList.remove('cursor-entering');
     }, 250);
 
-    // Modern sleek SVG cursor arrow with drop-shadow and glass pill label
+    // Angled SVG arrow tinted to the remote user's assigned color
+    // with a colored rounded-rectangle name badge at the tail
+    const shortName = this.formatDisplayName(userId);
     wrapper.innerHTML = `
-      <svg class="cursor-pointer drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 3L19.5 12L12 14.25L9 21L4 3Z" fill="${color}" stroke="#ffffff" stroke-width="1.75" stroke-linejoin="round"/>
+      <svg class="drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 2L20 12L12 14.5L9 22L4 2Z" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
-      <div class="cursor-label px-2 py-0.5 rounded-full text-[11px] font-medium text-white shadow-sm ring-1 ring-white/40 tracking-tight" style="background-color: ${color};">
-        ${this.formatShortId(userId)}
+      <div class="cursor-label px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white tracking-tight" style="background-color: ${color};">
+        ${shortName}
       </div>
     `;
 
     return wrapper;
+  }
+
+  /**
+   * Formats a userId into a display name like "Maya L." style.
+   * Falls back to truncated ID if no human-readable name.
+   */
+  private formatDisplayName(userId: string): string {
+    // Extract alphanumeric portion after common prefixes
+    const clean = userId.replace(/^user_/, '');
+    if (clean.length <= 6) return clean;
+    return `${clean.substring(0, 5)}…`;
   }
 
   private updateCursorColor(cursor: RemoteCursor, newColor: string): void {

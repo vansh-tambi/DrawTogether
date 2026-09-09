@@ -5,7 +5,7 @@
    ========================================================================== */
 
 :root {
-  --color-canvas-bg: #F9F9F8;
+  --color-canvas-bg: #F5F0E8;
   --color-primary: #5B4FE9;
   --color-primary-light: rgba(91, 79, 233, 0.12);
   --color-accent: #FF6B5E;
@@ -14,7 +14,9 @@
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
 
-  --shadow-dock: 0 20px 50px -10px rgba(0, 0, 0, 0.08), 0 10px 20px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.60);
+  --glass-border: rgba(255, 255, 255, 0.40);
+  --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* ==========================================================================
@@ -61,7 +63,21 @@ canvas#canvas.is-pan-tool:active {
 }
 
 /* ==========================================================================
-   Dock Buttons & Micro-Interactions
+   Dock Section Labels
+   ========================================================================== */
+
+.dock-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9CA3AF;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ==========================================================================
+   Dock Buttons & Vibrant Glow Active States
    ========================================================================== */
 
 .dock-btn {
@@ -69,18 +85,18 @@ canvas#canvas.is-pan-tool:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 12px;
   border: 1px solid transparent;
-  color: #4B5563;
+  color: #6B7280;
   background: transparent;
   cursor: pointer;
   transition: all 150ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 .dock-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.06);
   color: #111827;
   transform: scale(1.08);
 }
@@ -89,15 +105,71 @@ canvas#canvas.is-pan-tool:active {
   transform: scale(0.94);
 }
 
+/* ── Vibrant Glowing Pill Backgrounds for Active Tools ── */
+
+/* Default active: deep purple glow (Pen) */
 .dock-btn.is-active {
   background: #5B4FE9;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(91, 79, 233, 0.35);
+  box-shadow: 0 4px 20px rgba(91, 79, 233, 0.45), 0 0 30px rgba(91, 79, 233, 0.20);
   transform: scale(1.05);
+  border-color: rgba(91, 79, 233, 0.3);
 }
 
 .dock-btn.is-active:hover {
   background: #4C3DD8;
+  color: #ffffff;
+}
+
+/* Highlighter: warm yellow glow */
+.dock-btn[data-tool-glow="yellow"].is-active {
+  background: #F59E0B;
+  color: #78350F;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.45), 0 0 30px rgba(245, 158, 11, 0.20);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.dock-btn[data-tool-glow="yellow"].is-active:hover {
+  background: #D97706;
+  color: #78350F;
+}
+
+/* Eraser: rose glow */
+.dock-btn[data-tool-glow="rose"].is-active {
+  background: #F43F5E;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(244, 63, 94, 0.40), 0 0 30px rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.dock-btn[data-tool-glow="rose"].is-active:hover {
+  background: #E11D48;
+  color: #ffffff;
+}
+
+/* Segment Eraser: orange glow */
+.dock-btn[data-tool-glow="orange"].is-active {
+  background: #F97316;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.40), 0 0 30px rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.dock-btn[data-tool-glow="orange"].is-active:hover {
+  background: #EA580C;
+  color: #ffffff;
+}
+
+/* Pan: sky glow */
+.dock-btn[data-tool-glow="sky"].is-active {
+  background: #0EA5E9;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.40), 0 0 30px rgba(14, 165, 233, 0.18);
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.dock-btn[data-tool-glow="sky"].is-active:hover {
+  background: #0284C7;
   color: #ffffff;
 }
 
@@ -113,13 +185,48 @@ canvas#canvas.is-pan-tool:active {
   cursor: not-allowed;
 }
 
-/* Size Preset Radio Dots */
+/* ==========================================================================
+   Clear Canvas Wide Button
+   ========================================================================== */
+
+.clear-canvas-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 16px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #DC2626;
+  background: rgba(254, 226, 226, 0.50);
+  border: 1px solid rgba(252, 165, 165, 0.40);
+  cursor: pointer;
+  transition: all 150ms ease-out;
+  backdrop-filter: blur(8px);
+}
+
+.clear-canvas-btn:hover {
+  background: rgba(254, 202, 202, 0.70);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15);
+  transform: scale(1.02);
+}
+
+.clear-canvas-btn:active {
+  transform: scale(0.97);
+}
+
+/* ==========================================================================
+   Size Preset Radio Dots
+   ========================================================================== */
+
 .size-dot-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
@@ -133,9 +240,9 @@ canvas#canvas.is-pan-tool:active {
 }
 
 .size-dot-btn.is-active {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.80);
   border-color: rgba(0, 0, 0, 0.08);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
   transform: scale(1.08);
 }
 
@@ -149,15 +256,50 @@ canvas#canvas.is-pan-tool:active {
   opacity: 1;
 }
 
+/* ==========================================================================
+   Color Palette Tabs & Swatch Grid
+   ========================================================================== */
+
+.color-tab {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  color: #9CA3AF;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 140ms ease-out;
+  user-select: none;
+}
+
+.color-tab:hover {
+  color: #6B7280;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.color-tab.is-active {
+  color: #374151;
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
 /* Curated Swatch Buttons */
 .swatch-btn {
   position: relative;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 9999px;
-  border: 1.5px solid #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.70);
   background-color: var(--swatch-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   transition: transform 150ms cubic-bezier(0.2, 0, 0.2, 1), box-shadow 150ms ease-out;
 }
@@ -171,14 +313,15 @@ canvas#canvas.is-pan-tool:active {
   transform: scale(0.95);
 }
 
+/* Prominent double-ring offset for active swatch */
 .swatch-btn.is-active {
-  transform: scale(1.22);
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #5B4FE9, 0 2px 8px rgba(91, 79, 233, 0.3);
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--swatch-color), 0 2px 12px rgba(0, 0, 0, 0.18);
   z-index: 10;
 }
 
 /* ==========================================================================
-   Multiplayer Cursors
+   Multiplayer Cursors (Angled SVG Arrows with Rounded-Rect Name Badge)
    ========================================================================== */
 
 .remote-cursor {
@@ -206,10 +349,10 @@ canvas#canvas.is-pan-tool:active {
 
 .cursor-label {
   position: absolute;
-  left: 18px;
-  top: 18px;
+  left: 20px;
+  top: 20px;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 /* ==========================================================================
@@ -219,14 +362,14 @@ canvas#canvas.is-pan-tool:active {
 .toast-card {
   display: flex;
   align-items: center;
-  space-x: 8px;
-  padding: 8px 14px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
   color: #1F1B2E;
   font-size: 12px;
   font-weight: 500;
@@ -239,10 +382,9 @@ canvas#canvas.is-pan-tool:active {
 }
 
 .toast-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 9999px;
-  margin-right: 6px;
   flex-shrink: 0;
 }
 
@@ -269,7 +411,7 @@ canvas#canvas.is-pan-tool:active {
 }
 
 /* ==========================================================================
-   Modals
+   Modals (Heavy Glassmorphism)
    ========================================================================== */
 
 .modal-open {
@@ -279,4 +421,79 @@ canvas#canvas.is-pan-tool:active {
 
 .modal-open > div {
   transform: scale(1) !important;
+}
+
+/* ==========================================================================
+   Presence User List (Vertical Stack with Rounded-Rect Items)
+   ========================================================================== */
+
+.presence-user-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(8px);
+  transition: all 150ms ease-out;
+}
+
+.presence-user-item:hover {
+  background: rgba(255, 255, 255, 0.70);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.presence-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.presence-username {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presence-you-tag {
+  font-size: 9px;
+  font-weight: 600;
+  color: #6D28D9;
+  background: rgba(139, 92, 246, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.presence-overflow-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6B7280;
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 150ms ease-out;
+}
+
+.presence-overflow-pill:hover {
+  background: rgba(255, 255, 255, 0.70);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }

@@ -73,6 +73,10 @@ export class PresenceUI {
     return `${userId.substring(0, 8)}…`;
   }
 
+  /**
+   * Renders a vertical stacked list of users showing avatar + truncated username.
+   * Local user gets a "(You)" tag. Overflow users shown as "+N More" pill.
+   */
   public render(): void {
     const count = this.users.size;
     if (this.onCountChange) {
@@ -87,34 +91,31 @@ export class PresenceUI {
       return 0;
     });
 
-    const maxVisible = 4;
+    const maxVisible = 3;
     const visibleUsers = allUsers.slice(0, maxVisible);
     const overflowCount = allUsers.length - maxVisible;
 
-    let html = `<div class="flex items-center -space-x-1.5 hover:space-x-1 transition-all duration-200 py-0.5">`;
+    let html = `<div class="flex flex-col items-end space-y-1">`;
 
     for (const user of visibleUsers) {
       const isLocal = user.userId === this.localUserId;
       const initials = this.getInitials(user.userId);
-      const title = isLocal ? `${user.userId} (You)` : user.userId;
+      const displayName = this.formatShortId(user.userId);
 
       html += `
         <div
-          class="relative group cursor-pointer transition-transform duration-150 hover:scale-115 hover:z-20"
+          class="presence-user-item"
           data-user-id="${user.userId}"
-          title="${title}"
+          title="${user.userId}"
         >
           <div
-            class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-2 ring-white/90 dark:ring-zinc-900/90 select-none transition-shadow"
+            class="presence-avatar"
             style="background-color: ${user.color};"
           >
             ${initials}
           </div>
-          ${
-            isLocal
-              ? `<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1.5 ring-white" title="You"></span>`
-              : ''
-          }
+          <span class="presence-username">${displayName}</span>
+          ${isLocal ? `<span class="presence-you-tag">(You)</span>` : ''}
         </div>
       `;
     }
@@ -123,10 +124,10 @@ export class PresenceUI {
       const remainingUsers = allUsers.slice(maxVisible).map((u) => u.userId).join(', ');
       html += `
         <div
-          class="relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white/90 dark:ring-zinc-900/90 shadow-sm cursor-pointer hover:scale-110 hover:z-20 transition-transform select-none"
-          title="Collaborators: ${remainingUsers}"
+          class="presence-overflow-pill"
+          title="Other collaborators: ${remainingUsers}"
         >
-          +${overflowCount}
+          +${overflowCount} More
         </div>
       `;
     }

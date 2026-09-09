@@ -9,9 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
 </head>
-<body class="w-full h-full overflow-hidden select-none bg-[#F9F9F8] text-zinc-900 font-sans antialiased">
+<body class="w-full h-full overflow-hidden select-none bg-[#F5F0E8] text-zinc-900 font-sans antialiased">
 
-  <!-- Full-Bleed Canvas with Dot Grid -->
+  <!-- Full-Bleed Canvas with Parchment Tone -->
   <canvas id="canvas" class="block absolute inset-0 w-screen h-screen touch-none"></canvas>
 
   <!-- Remote Cursor Overlay -->
@@ -21,44 +21,44 @@
   <div id="toast-container" class="fixed top-20 right-6 z-50 flex flex-col space-y-2 pointer-events-none" aria-live="polite"></div>
 
   <!-- ========================================================================
-       Top Navigation & Presence Bar (macOS Floating Glass Pill)
+       Top Navigation & Presence Bar (Heavy Glassmorphic Header)
        ======================================================================== -->
-  <header class="fixed top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-5xl z-30 flex items-center justify-between px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/75 dark:bg-zinc-900/80 border border-white/50 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)] transition-all">
-    <!-- Left: Brand Logo & Title -->
+  <header class="fixed top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-5xl z-30 flex items-center justify-between px-6 py-3.5 rounded-2xl backdrop-blur-2xl bg-white/60 border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.06)] transition-all">
+    <!-- Left: Abstract Bird Logo & Brand Title -->
     <div class="flex items-center space-x-3">
-      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
+      <!-- Abstract line-art bird logo -->
+      <div class="w-9 h-9 flex items-center justify-center text-indigo-600">
+        <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 36C12 28 18 22 26 20C22 24 20 30 20 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M26 20C30 16 36 14 42 16C38 18 34 22 32 28" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M26 20C24 16 24 12 26 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="30" cy="14" r="1.5" fill="currentColor"/>
         </svg>
       </div>
-      <div class="flex items-baseline space-x-2">
-        <span class="font-display font-bold text-base tracking-tight text-zinc-900 dark:text-white">DrawTogether</span>
-        <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 border border-indigo-200/50">Studio</span>
-      </div>
+      <span class="font-display font-bold text-lg tracking-tight text-zinc-900">DrawTogether</span>
     </div>
 
-    <!-- Center: Live Connection Pulse Badge -->
+    <!-- Center: Enhanced Connection Status Pill -->
     <div class="flex items-center">
-      <div id="connection-pill" class="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs transition-colors">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+      <div id="connection-pill" class="flex items-center space-x-2.5 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md bg-white/50 border border-white/40 shadow-sm transition-colors">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 ring-4 ring-green-400/40"></span>
         </span>
-        <span id="connection-text" class="font-medium">Connected</span>
-        <span class="text-zinc-300 dark:text-zinc-600">·</span>
-        <span id="participant-count-text" class="font-medium text-emerald-800">1 User</span>
+        <span id="connection-text" class="font-semibold text-zinc-700">Connected</span>
+        <span id="participant-count-text" class="font-semibold text-zinc-500">(1 User)</span>
       </div>
     </div>
 
-    <!-- Right: Presence Avatar Stack & Quick Actions -->
+    <!-- Right: Vertical User List, +N More, Settings Gear -->
     <div class="flex items-center space-x-3">
-      <!-- Avatar Stack Container -->
+      <!-- User List Container (rendered by PresenceUI) -->
       <div id="presence-container" class="flex items-center"></div>
 
-      <div class="h-4 w-px bg-zinc-200/80 dark:bg-zinc-700/80"></div>
+      <div class="h-5 w-px bg-zinc-300/50"></div>
 
       <!-- Share Room Link -->
-      <button id="btn-share" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-100/90 dark:hover:bg-zinc-700/80 border border-zinc-200/70 dark:border-zinc-700/70 transition-all shadow-2xs hover:scale-102 active:scale-98 cursor-pointer" title="Copy Room Invite Link">
+      <button id="btn-share" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-600 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer backdrop-blur-sm" title="Copy Room Invite Link">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
@@ -67,180 +67,231 @@
       </button>
 
       <!-- Keyboard Shortcuts / Help Info Button -->
-      <button id="btn-info" class="p-1.5 rounded-xl text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-100/90 dark:hover:bg-zinc-700/80 border border-zinc-200/70 dark:border-zinc-700/70 transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer" title="Shortcuts & Info">
+      <button id="btn-info" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Shortcuts & Info">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <line x1="12" y1="16" x2="12" y2="12"/>
           <line x1="12" y1="8" x2="12.01" y2="8"/>
         </svg>
       </button>
+
+      <!-- Settings Gear Icon -->
+      <button id="btn-settings" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
     </div>
   </header>
 
   <!-- ========================================================================
-       Floating Bottom Control Dock (macOS Floating Glass Dock)
+       Floating Bottom Control Dock (Heavy Glassmorphic Dashboard)
        ======================================================================== -->
-  <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center p-2 rounded-2xl backdrop-blur-xl bg-white/75 dark:bg-zinc-900/80 border border-white/50 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)] transition-all space-x-2 max-w-[96vw] overflow-x-auto" aria-label="Drawing Tools Dock">
+  <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-stretch p-3 rounded-2xl backdrop-blur-2xl bg-white/60 border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.06)] transition-all max-w-[96vw] overflow-x-auto" aria-label="Drawing Tools Dock">
 
-    <!-- Group A: Drawing Tools -->
-    <div class="flex items-center space-x-1">
-      <!-- Brush / Pen Tool -->
-      <button id="tool-brush" class="dock-btn is-active" title="Pen (B)" aria-label="Pen Tool">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
-        </svg>
-      </button>
-
-      <!-- Highlighter Tool -->
-      <button id="tool-highlighter" class="dock-btn" title="Highlighter (H)" aria-label="Highlighter Tool">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m9 11-6 6v3h3l6-6"/>
-          <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
-        </svg>
-      </button>
-
-      <!-- Freehand Eraser Tool -->
-      <button id="tool-eraser" class="dock-btn" title="Eraser (E)" aria-label="Freehand Eraser Tool">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
-          <path d="M22 21H7"/>
-          <path d="m5 11 9 9"/>
-        </svg>
-      </button>
-
-      <!-- Segment Trim Eraser Tool -->
-      <button id="tool-segment-eraser" class="dock-btn" title="Segment Eraser (X) - Click to trim line to intersection" aria-label="Segment Eraser Tool">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="6" cy="6" r="3"/>
-          <circle cx="6" cy="18" r="3"/>
-          <line x1="20" y1="4" x2="8.12" y2="15.88"/>
-          <line x1="14.47" y1="14.48" x2="20" y2="20"/>
-          <line x1="8.12" y1="8.12" x2="12" y2="12"/>
-        </svg>
-      </button>
-
-      <!-- Pan / Select Tool -->
-      <button id="tool-pan" class="dock-btn" title="Pan Tool (V / P)" aria-label="Pan Tool">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
-          <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
-          <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
-          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Divider -->
-    <div class="h-8 w-px bg-zinc-200/80 dark:bg-zinc-700/80"></div>
-
-    <!-- Group B: Stroke Size Presets & Range Slider -->
-    <div class="flex items-center space-x-2.5 px-1 relative group/slider">
-      <!-- Quick Preset Radio Dots -->
-      <div class="flex items-center space-x-1.5 bg-zinc-100/70 dark:bg-zinc-800/70 p-1 rounded-xl">
-        <button class="size-dot-btn" data-size="2" title="2px Hairline">
-          <span class="w-1.5 h-1.5 rounded-full bg-zinc-700 dark:bg-zinc-300"></span>
+    <!-- ═══ Column A: Tool ═══ -->
+    <div class="flex flex-col items-center px-3">
+      <span class="dock-section-label">Tool</span>
+      <div class="flex items-center space-x-1 mt-1.5">
+        <!-- Brush / Pen Tool -->
+        <button id="tool-brush" class="dock-btn is-active" title="Pen (B)" aria-label="Pen Tool" data-tool-glow="purple">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
+          </svg>
         </button>
-        <button class="size-dot-btn is-active" data-size="4" title="4px Regular">
-          <span class="w-2 h-2 rounded-full bg-zinc-700 dark:bg-zinc-300"></span>
+
+        <!-- Highlighter Tool -->
+        <button id="tool-highlighter" class="dock-btn" title="Highlighter (H)" aria-label="Highlighter Tool" data-tool-glow="yellow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 11-6 6v3h3l6-6"/>
+            <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+          </svg>
         </button>
-        <button class="size-dot-btn" data-size="8" title="8px Medium">
-          <span class="w-2.5 h-2.5 rounded-full bg-zinc-700 dark:bg-zinc-300"></span>
+
+        <!-- Freehand Eraser Tool -->
+        <button id="tool-eraser" class="dock-btn" title="Eraser (E)" aria-label="Freehand Eraser Tool" data-tool-glow="rose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+            <path d="M22 21H7"/>
+            <path d="m5 11 9 9"/>
+          </svg>
         </button>
-        <button class="size-dot-btn" data-size="16" title="16px Bold">
-          <span class="w-3.5 h-3.5 rounded-full bg-zinc-700 dark:bg-zinc-300"></span>
+
+        <!-- Segment Trim Eraser Tool -->
+        <button id="tool-segment-eraser" class="dock-btn" title="Segment Eraser (X) - Click to trim line to intersection" aria-label="Segment Eraser Tool" data-tool-glow="orange">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="3"/>
+            <circle cx="6" cy="18" r="3"/>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+          </svg>
         </button>
-        <button class="size-dot-btn" data-size="24" title="24px Heavy">
-          <span class="w-4 h-4 rounded-full bg-zinc-700 dark:bg-zinc-300"></span>
+
+        <!-- Pan / Select Tool -->
+        <button id="tool-pan" class="dock-btn" title="Pan Tool (V / P)" aria-label="Pan Tool" data-tool-glow="sky">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+          </svg>
         </button>
       </div>
+    </div>
 
-      <!-- Live Dot Preview & Fluid Range Slider -->
-      <div class="relative flex items-center space-x-2">
-        <div class="w-6 h-6 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 flex items-center justify-center border border-zinc-200/60 shadow-2xs">
-          <div id="width-dot-preview" class="rounded-full bg-zinc-800 transition-all duration-150" style="width: 4px; height: 4px;"></div>
+    <!-- Vertical Divider -->
+    <div class="w-px self-stretch bg-gray-300/50 mx-1"></div>
+
+    <!-- ═══ Column B: Brush Size ═══ -->
+    <div class="flex flex-col items-center px-3 relative group/slider">
+      <span class="dock-section-label">Brush Size</span>
+      <div class="flex flex-col items-center mt-1.5 space-y-1.5">
+        <!-- Visual Scale Dots (5 increasing sizes) -->
+        <div class="flex items-end space-x-2 h-6">
+          <button class="size-dot-btn" data-size="2" title="2px Hairline">
+            <span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+          </button>
+          <button class="size-dot-btn is-active" data-size="4" title="4px Regular">
+            <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
+          </button>
+          <button class="size-dot-btn" data-size="8" title="8px Medium">
+            <span class="w-3 h-3 rounded-full bg-zinc-600"></span>
+          </button>
+          <button class="size-dot-btn" data-size="16" title="16px Bold">
+            <span class="w-4 h-4 rounded-full bg-zinc-600"></span>
+          </button>
+          <button class="size-dot-btn" data-size="24" title="24px Heavy">
+            <span class="w-5 h-5 rounded-full bg-zinc-600"></span>
+          </button>
         </div>
 
-        <input
-          type="range"
-          id="stroke-width-slider"
-          class="w-20 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-all"
-          min="1"
-          max="36"
-          value="4"
-          title="Brush size: 4px"
-        />
+        <!-- Fluid Range Slider -->
+        <div class="relative flex items-center space-x-2">
+          <div class="w-6 h-6 rounded-lg bg-white/60 flex items-center justify-center border border-white/40 shadow-sm">
+            <div id="width-dot-preview" class="rounded-full bg-zinc-800 transition-all duration-150" style="width: 4px; height: 4px;"></div>
+          </div>
 
-        <!-- Dynamic Tooltip Readout on Hover/Drag -->
+          <input
+            type="range"
+            id="stroke-width-slider"
+            class="w-24 h-1.5 bg-zinc-300/60 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-all"
+            min="1"
+            max="36"
+            value="4"
+            title="Brush size: 4px"
+          />
+        </div>
+
+        <!-- Dynamic Text Readout Below Slider -->
+        <span id="size-readout" class="text-[10px] font-semibold text-zinc-500 tracking-wide">Brush Size: 4pt</span>
+
+        <!-- Tooltip on hover (hidden until hover) -->
         <div id="size-tooltip" class="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none px-2 py-0.5 rounded-md bg-zinc-900 text-white text-[11px] font-medium shadow-md transition-opacity duration-150 whitespace-nowrap">
           Brush: 4pt
         </div>
       </div>
     </div>
 
-    <!-- Divider -->
-    <div class="h-8 w-px bg-zinc-200/80 dark:bg-zinc-700/80"></div>
+    <!-- Vertical Divider -->
+    <div class="w-px self-stretch bg-gray-300/50 mx-1"></div>
 
-    <!-- Group C: Color Palette System -->
-    <div id="swatch-palette" class="flex items-center space-x-1.5 px-1" aria-label="Color Palette">
-      <button class="swatch-btn is-active" data-color="#1F1B2E" style="--swatch-color: #1F1B2E;" title="Ink Noir"></button>
-      <button class="swatch-btn" data-color="#5B4FE9" style="--swatch-color: #5B4FE9;" title="Studio Violet"></button>
-      <button class="swatch-btn" data-color="#2563EB" style="--swatch-color: #2563EB;" title="Cobalt Blue"></button>
-      <button class="swatch-btn" data-color="#0891B2" style="--swatch-color: #0891B2;" title="Teal"></button>
-      <button class="swatch-btn" data-color="#059669" style="--swatch-color: #059669;" title="Emerald"></button>
-      <button class="swatch-btn" data-color="#D97706" style="--swatch-color: #D97706;" title="Warm Amber"></button>
-      <button class="swatch-btn" data-color="#FF6B5E" style="--swatch-color: #FF6B5E;" title="Coral"></button>
-      <button class="swatch-btn" data-color="#DB2777" style="--swatch-color: #DB2777;" title="Pink Rose"></button>
-      <button class="swatch-btn" data-color="#7C3AED" style="--swatch-color: #7C3AED;" title="Purple"></button>
+    <!-- ═══ Column C: Color ═══ -->
+    <div class="flex flex-col items-center px-3">
+      <span class="dock-section-label">Color</span>
+      <div class="mt-1.5">
+        <!-- Tab headers -->
+        <div class="flex items-center space-x-1 mb-1.5">
+          <button id="tab-primary" class="color-tab is-active" data-tab="primary">Primary</button>
+          <button id="tab-pastel" class="color-tab" data-tab="pastel">Pastel</button>
+        </div>
 
-      <!-- Custom Color Picker Button -->
-      <div class="relative">
-        <button id="btn-custom-color" class="w-6 h-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600 hover:border-zinc-500 flex items-center justify-center text-zinc-500 hover:text-zinc-800 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-2xs" title="Custom Color Picker">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
-        <input type="color" id="custom-color-input" class="sr-only" value="#5B4FE9" />
+        <!-- Primary color grid -->
+        <div id="swatch-grid-primary" class="swatch-grid" aria-label="Primary Color Palette">
+          <button class="swatch-btn is-active" data-color="#1F1B2E" style="--swatch-color: #1F1B2E;" title="Ink Noir"></button>
+          <button class="swatch-btn" data-color="#5B4FE9" style="--swatch-color: #5B4FE9;" title="Studio Violet"></button>
+          <button class="swatch-btn" data-color="#2563EB" style="--swatch-color: #2563EB;" title="Cobalt Blue"></button>
+          <button class="swatch-btn" data-color="#0891B2" style="--swatch-color: #0891B2;" title="Teal"></button>
+          <button class="swatch-btn" data-color="#059669" style="--swatch-color: #059669;" title="Emerald"></button>
+          <button class="swatch-btn" data-color="#D97706" style="--swatch-color: #D97706;" title="Warm Amber"></button>
+          <button class="swatch-btn" data-color="#FF6B5E" style="--swatch-color: #FF6B5E;" title="Coral"></button>
+          <button class="swatch-btn" data-color="#DB2777" style="--swatch-color: #DB2777;" title="Pink Rose"></button>
+          <button class="swatch-btn" data-color="#7C3AED" style="--swatch-color: #7C3AED;" title="Purple"></button>
+          <button class="swatch-btn" data-color="#DC2626" style="--swatch-color: #DC2626;" title="Red"></button>
+        </div>
+
+        <!-- Pastel color grid (hidden by default) -->
+        <div id="swatch-grid-pastel" class="swatch-grid hidden" aria-label="Pastel Color Palette">
+          <button class="swatch-btn" data-color="#C4B5FD" style="--swatch-color: #C4B5FD;" title="Lavender"></button>
+          <button class="swatch-btn" data-color="#93C5FD" style="--swatch-color: #93C5FD;" title="Sky"></button>
+          <button class="swatch-btn" data-color="#6EE7B7" style="--swatch-color: #6EE7B7;" title="Mint"></button>
+          <button class="swatch-btn" data-color="#FDE68A" style="--swatch-color: #FDE68A;" title="Butter"></button>
+          <button class="swatch-btn" data-color="#FCA5A5" style="--swatch-color: #FCA5A5;" title="Blush"></button>
+          <button class="swatch-btn" data-color="#FDBA74" style="--swatch-color: #FDBA74;" title="Peach"></button>
+          <button class="swatch-btn" data-color="#F9A8D4" style="--swatch-color: #F9A8D4;" title="Rose"></button>
+          <button class="swatch-btn" data-color="#A5B4FC" style="--swatch-color: #A5B4FC;" title="Periwinkle"></button>
+          <button class="swatch-btn" data-color="#A7F3D0" style="--swatch-color: #A7F3D0;" title="Seafoam"></button>
+          <button class="swatch-btn" data-color="#FEF3C7" style="--swatch-color: #FEF3C7;" title="Cream"></button>
+        </div>
+
+        <!-- Custom Color Picker Button -->
+        <div class="relative mt-1.5 flex justify-center">
+          <button id="btn-custom-color" class="w-7 h-7 rounded-full border border-dashed border-zinc-300/60 hover:border-zinc-400 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-sm bg-white/40 backdrop-blur-sm" title="Custom Color Picker">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <input type="color" id="custom-color-input" class="sr-only" value="#5B4FE9" />
+        </div>
       </div>
     </div>
 
-    <!-- Divider -->
-    <div class="h-8 w-px bg-zinc-200/80 dark:bg-zinc-700/80"></div>
+    <!-- Vertical Divider -->
+    <div class="w-px self-stretch bg-gray-300/50 mx-1"></div>
 
-    <!-- Group D: History & Canvas Actions -->
-    <div class="flex items-center space-x-1">
-      <!-- Undo -->
-      <button id="btn-undo" class="dock-btn" title="Undo (Ctrl+Z)" aria-label="Undo">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 7v6h6"/>
-          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
-        </svg>
-      </button>
+    <!-- ═══ Column D: Actions ═══ -->
+    <div class="flex flex-col items-center px-3">
+      <span class="dock-section-label">Actions</span>
+      <div class="flex flex-col items-center mt-1.5 space-y-1.5">
+        <!-- Undo / Redo Row -->
+        <div class="flex items-center space-x-1">
+          <!-- Undo -->
+          <button id="btn-undo" class="dock-btn" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7v6h6"/>
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+            </svg>
+          </button>
 
-      <!-- Redo -->
-      <button id="btn-redo" class="dock-btn" title="Redo (Ctrl+Y)" aria-label="Redo">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 7v6h-6"/>
-          <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
-        </svg>
-      </button>
+          <!-- Redo -->
+          <button id="btn-redo" class="dock-btn" title="Redo (Ctrl+Y)" aria-label="Redo">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 7v6h-6"/>
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+            </svg>
+          </button>
+        </div>
 
-      <!-- Clear Canvas Modal Trigger -->
-      <button id="btn-clear" class="dock-btn hover:text-rose-600 dark:hover:text-rose-400" title="Clear Board" aria-label="Clear Canvas">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-        </svg>
-      </button>
+        <!-- Wide Clear Canvas Button -->
+        <button id="btn-clear" class="clear-canvas-btn" title="Clear Board" aria-label="Clear Canvas">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+          <span>Clear Canvas</span>
+        </button>
+      </div>
     </div>
   </nav>
 
   <!-- ========================================================================
        Clear Board Confirmation Modal (Two-step Protection)
        ======================================================================== -->
-  <div id="modal-clear" class="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200">
-    <div class="w-[90%] max-w-sm p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-white/60 dark:border-white/10 shadow-2xl scale-95 transition-transform duration-200 text-center">
+  <div id="modal-clear" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="w-[90%] max-w-sm p-6 rounded-2xl bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.15)] scale-95 transition-transform duration-200 text-center">
       <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 6h18"/>
@@ -248,11 +299,11 @@
           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
         </svg>
       </div>
-      <h3 class="text-base font-semibold text-zinc-900 dark:text-white mb-1">Clear entire board?</h3>
+      <h3 class="text-base font-semibold text-zinc-900 mb-1">Clear entire board?</h3>
       <p class="text-xs text-zinc-500 mb-5 leading-relaxed">This will erase all strokes on your canvas. You can undo this action if needed.</p>
       <div class="flex items-center space-x-2">
-        <button id="btn-modal-cancel" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors cursor-pointer">Cancel</button>
-        <button id="btn-modal-confirm" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 transition-colors cursor-pointer">Clear Board</button>
+        <button id="btn-modal-cancel" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-white/60 hover:bg-white/90 text-zinc-700 border border-white/40 transition-colors cursor-pointer backdrop-blur-sm">Cancel</button>
+        <button id="btn-modal-confirm" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 transition-colors cursor-pointer">Clear Board</button>
       </div>
     </div>
   </div>
@@ -260,12 +311,11 @@
   <!-- ========================================================================
        Keyboard Shortcuts & Info Modal
        ======================================================================== -->
-  <div id="modal-info" class="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200">
-    <div class="w-[90%] max-w-md p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-white/60 dark:border-white/10 shadow-2xl scale-95 transition-transform duration-200">
-      <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-100 dark:border-zinc-800">
+  <div id="modal-info" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="w-[90%] max-w-md p-6 rounded-2xl bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.15)] scale-95 transition-transform duration-200">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200/50">
         <div class="flex items-center space-x-2">
-          <span class="font-display font-bold text-base text-zinc-900 dark:text-white">Studio Shortcuts</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold uppercase">Cheatsheet</span>
+          <span class="font-display font-bold text-base text-zinc-900">Keyboard Shortcuts</span>
         </div>
         <button id="btn-info-close" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -274,38 +324,38 @@
           </svg>
         </button>
       </div>
-      <div class="grid grid-cols-2 gap-2.5 text-xs text-zinc-600 dark:text-zinc-300 mb-4">
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+      <div class="grid grid-cols-2 gap-2.5 text-xs text-zinc-600 mb-4">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Pen / Brush</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">B</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">B</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Highlighter</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">H</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">H</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Eraser</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">E</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">E</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Segment Trim</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">X</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">X</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Pan Tool</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">V</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">V</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Undo</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">Ctrl+Z</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">Ctrl+Z</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Redo</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">Ctrl+Y</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">Ctrl+Y</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
           <span>Brush Size</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white dark:bg-zinc-700 border border-zinc-200 shadow-2xs">[ ]</kbd>
+          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">[ ]</kbd>
         </div>
       </div>
       <p class="text-[11px] text-zinc-400 text-center">DrawTogether Real-time Multi-User Studio · Zero latency collaboration</p>

@@ -4,7 +4,7 @@ import { eraseStrokeSegmentAt } from './geometry';
 /**
  * Off-white "paper" tone for DrawTogether visual theme.
  */
-export const CANVAS_BG_COLOR = '#faf9f5';
+export const CANVAS_BG_COLOR = '#F5F0E8';
 
 export interface CanvasEngineOptions {
   canvas: HTMLCanvasElement;
@@ -152,7 +152,7 @@ export class CanvasEngine {
     this.ctx.fillRect(0, 0, width, height);
 
     // Subtle architect / whiteboard dot grid
-    this.ctx.fillStyle = '#E5E3DC';
+    this.ctx.fillStyle = '#DDD8CC';
     const spacing = 28;
     const dotRadius = 1;
     for (let x = spacing; x < width; x += spacing) {

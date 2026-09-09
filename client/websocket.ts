@@ -50,6 +50,17 @@ export class WebSocketClient {
   private messageHandlers: Set<MessageHandler> = new Set();
   private stateHandlers: Set<StateChangeHandler> = new Set();
 
+  /**
+   * Offline Mid-Stroke Buffering:
+   * -----------------------------
+   * If the connection drops mid-stroke, local drawing continues smoothly and uninterrupted.
+   * Stroke lifecycle messages (start, points, end) are buffered in this FIFO queue.
+   * Upon reconnection, once the authoritative "welcome" snapshot has been applied,
+   * flushOfflineQueue() sends these completed offline strokes to the room.
+   * Ephemeral cursor-move messages are dropped while offline to avoid stale position bursts.
+   */
+  private offlineQueue: ClientMessage[] = [];
+
   constructor(config: WebSocketClientConfig = {}) {
     const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost';
@@ -273,8 +284,41 @@ export class WebSocketClient {
         console.error('[WebSocketClient] Error sending message:', err, message);
       }
     } else {
-      console.warn('[WebSocketClient] Cannot send message, socket is not open:', message.type);
+      // Ephemeral cursor moves are dropped when offline
+      if (message.type === 'cursor-move') {
+        return;
+      }
+
+      // Critical stroke lifecycle messages are buffered to preserve offline artwork
+      this.offlineQueue.push(message);
+      console.log(
+        `[WebSocketClient] Offline mid-stroke buffering: saved "${message.type}". Total buffered: ${this.offlineQueue.length}`
+      );
     }
+  }
+
+  /**
+   * Flushes all messages buffered while offline once reconnected.
+   */
+  public flushOfflineQueue(): void {
+    if (this.offlineQueue.length === 0) return;
+
+    if (!this.isConnected()) {
+      console.warn('[WebSocketClient] Cannot flush offline queue: socket is not connected yet.');
+      return;
+    }
+
+    console.log(`[WebSocketClient] Flushing ${this.offlineQueue.length} offline buffered messages...`);
+    const queue = this.offlineQueue;
+    this.offlineQueue = [];
+
+    for (const msg of queue) {
+      this.sendRaw(msg);
+    }
+  }
+
+  public hasOfflineMessages(): boolean {
+    return this.offlineQueue.length > 0;
   }
 
   private ensureThrottleTimer(): void {

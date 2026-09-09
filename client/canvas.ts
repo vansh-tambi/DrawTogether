@@ -337,6 +337,28 @@ export class CanvasEngine {
     this.remoteStrokes.delete(strokeId);
   }
 
+  /**
+   * Finalizes and commits any in-progress remote strokes for a user who abruptly disconnected,
+   * preventing orphaned stroke memory leaks.
+   */
+  public cleanRemoteStrokesForUser(userId: string): void {
+    for (const [strokeId, active] of Array.from(this.remoteStrokes.entries())) {
+      if (active.stroke.userId === userId) {
+        if (active.stroke.points.length > 0) {
+          this.strokes.push(active.stroke);
+        }
+        this.remoteStrokes.delete(strokeId);
+      }
+    }
+  }
+
+  /**
+   * Clears all in-progress remote strokes, used when re-synchronizing from fresh server snapshot.
+   */
+  public clearRemoteStrokes(): void {
+    this.remoteStrokes.clear();
+  }
+
   // ==========================================================================
   // Pointer Events & Incremental Drawing
   // ==========================================================================

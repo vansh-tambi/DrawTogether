@@ -1,0 +1,22 @@
+{
+  "name": "drawtogether",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"tsx watch server/server.ts\" \"vite client\"",
+    "build": "tsc --noEmit && vite build client --outDir ../dist",
+    "start": "tsx server/server.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "@types/ws": "^8.5.12",
+    "concurrently": "^9.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
+  }
+}

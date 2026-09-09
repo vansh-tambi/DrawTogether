@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Theme Toggle
   // ========================================================================
 
-  function applyTheme(theme: 'light' | 'dark', announce = false): void {
+  function applyTheme(theme: 'light' | 'dark'): void {
     const isDark = theme === 'dark';
     document.documentElement.dataset.theme = theme;
     document.body.classList.toggle('dark-mode', isDark);
@@ -133,10 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {
       // Local storage may be unavailable in private or embedded contexts.
     }
-
-    if (announce) {
-      showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled');
-    }
   }
 
   let savedTheme: string | null = null;
@@ -149,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme(savedTheme === 'light' ? 'light' : 'dark');
   btnSettings.addEventListener('click', () => {
     const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
-    applyTheme(nextTheme, true);
+    applyTheme(nextTheme);
   });
 
   // Canvas redraw cross-fade blend animation
@@ -460,9 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isDockMinimized = minimized;
     dockPanel.classList.toggle('is-minimized', minimized);
     btnDockMinimize.setAttribute('aria-expanded', String(!minimized));
-    if (minimized) {
-      showToast('Toolbar minimized · click pill to expand');
-    }
   }
 
   btnDockMinimize?.addEventListener('click', (e) => {
@@ -496,7 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {
       // ignore
     }
-    showToast('Toolbar position reset to bottom');
   }
 
   btnDockReset?.addEventListener('click', (e) => {

@@ -64,15 +64,26 @@ export class WebSocketClient {
   constructor(config: WebSocketClientConfig = {}) {
     const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost';
-    const defaultPort = '3000';
-    const port =
-      typeof window !== 'undefined' && (window.location.port === '5173' || window.location.port === '')
-        ? defaultPort
-        : typeof window !== 'undefined'
-          ? window.location.port
-          : defaultPort;
 
-    this.url = config.url || `${protocol}//${host}:${port}`;
+    let resolvedUrl: string;
+    if (config.url) {
+      resolvedUrl = config.url;
+    } else if (typeof window !== 'undefined') {
+      if (window.location.port === '5173') {
+        // Local Vite dev server connecting to local backend
+        resolvedUrl = `${protocol}//${host}:3000`;
+      } else if (window.location.port) {
+        // Local or custom port (e.g. localhost:3000)
+        resolvedUrl = `${protocol}//${host}:${window.location.port}`;
+      } else {
+        // Production deployment with standard port (80/443 on Render/Railway/Fly)
+        resolvedUrl = `${protocol}//${host}`;
+      }
+    } else {
+      resolvedUrl = 'ws://localhost:3000';
+    }
+
+    this.url = resolvedUrl;
     this.baseDelayMs = config.baseDelayMs ?? 1000;
     this.maxDelayMs = config.maxDelayMs ?? 10000;
     this.backoffFactor = config.backoffFactor ?? 1.5;

@@ -30,6 +30,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const DIST_DIR = path.join(__dirname, '../dist');
 
 const MIME_TYPES: Record<string, string> = {
@@ -43,8 +44,33 @@ const MIME_TYPES: Record<string, string> = {
   '.ico': 'image/x-icon',
 };
 
-// Plain HTTP server for static files
+// Plain HTTP server for static files and health checks
 const server = http.createServer((req, res) => {
+  // Permissive CORS headers for deployed domains
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Health check endpoint for hosting platform uptime probes (Render/Railway/Fly)
+  const cleanUrl = (req.url || '').split('?')[0];
+  if (cleanUrl === '/health' || cleanUrl === '/healthz') {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(
+      JSON.stringify({
+        status: 'ok',
+        uptime: Math.round(process.uptime()),
+        timestamp: new Date().toISOString(),
+      })
+    );
+    return;
+  }
+
   const reqUrl = req.url === '/' ? '/index.html' : req.url || '/index.html';
   const filePath = path.normalize(path.join(DIST_DIR, reqUrl));
 
@@ -379,6 +405,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`[Server] HTTP and WebSocket server listening on http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`[Server] DrawTogether production server listening on http://${HOST}:${PORT}`);
+  console.log(`[Server] Health check available at http://${HOST}:${PORT}/health`);
 });

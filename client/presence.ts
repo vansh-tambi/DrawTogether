@@ -9,6 +9,7 @@ export class PresenceUI {
   private container: HTMLElement;
   private users: Map<string, PresenceUser> = new Map();
   private localUserId: string;
+  public onCountChange?: (count: number) => void;
 
   constructor(container: HTMLElement, localUserId: string) {
     this.container = container;
@@ -38,12 +39,25 @@ export class PresenceUI {
   }
 
   public removeUser(userId: string): void {
-    this.users.delete(userId);
-    this.render();
+    const el = this.container.querySelector(`[data-user-id="${userId}"]`) as HTMLElement;
+    if (el) {
+      el.classList.add('user-leaving');
+      setTimeout(() => {
+        this.users.delete(userId);
+        this.render();
+      }, 160);
+    } else {
+      this.users.delete(userId);
+      this.render();
+    }
   }
 
   public getUserColor(userId: string): string | undefined {
     return this.users.get(userId)?.color;
+  }
+
+  public getUserCount(): number {
+    return this.users.size;
   }
 
   private formatShortId(userId: string): string {
@@ -53,28 +67,24 @@ export class PresenceUI {
 
   public render(): void {
     const count = this.users.size;
+    if (this.onCountChange) {
+      this.onCountChange(count);
+    }
 
-    let html = `
-      <div class="presence-header">
-        <span class="presence-pulse-dot"></span>
-        <span class="presence-title">${count} Online</span>
-      </div>
-      <div class="presence-list">
-    `;
+    let html = '';
 
     for (const user of this.users.values()) {
       const isLocal = user.userId === this.localUserId;
       const label = isLocal ? `${this.formatShortId(user.userId)} (You)` : this.formatShortId(user.userId);
 
       html += `
-        <div class="presence-user-chip ${isLocal ? 'is-local' : ''}" title="${user.userId}">
-          <span class="user-color-dot" style="background-color: ${user.color};"></span>
-          <span class="user-name">${label}</span>
+        <div class="presence-pill ${isLocal ? 'is-local' : ''}" data-user-id="${user.userId}" title="${user.userId}">
+          <span class="avatar-dot" style="background-color: ${user.color};"></span>
+          <span class="avatar-name">${label}</span>
         </div>
       `;
     }
 
-    html += `</div>`;
     this.container.innerHTML = html;
   }
 }

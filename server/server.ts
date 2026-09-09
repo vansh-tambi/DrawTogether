@@ -320,7 +320,7 @@ wss.on('connection', (ws: WebSocket, req) => {
       }
 
       default:
-        console.log(`[Server] Received unhandled message "${msg.type}" from ${currentUserId}`);
+        console.log(`[Server] Received unhandled message from ${currentUserId}`);
         break;
     }
   });

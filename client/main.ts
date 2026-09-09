@@ -1,14 +1,25 @@
-import { initCanvas, CANVAS_BG_COLOR } from './canvas';
-import { WebSocketClient } from './websocket';
+import { initCanvas } from './canvas';
+import { WebSocketClient, type ConnectionState } from './websocket';
 import { CursorOverlayManager } from './cursors';
 import { PresenceUI } from './presence';
 
 document.addEventListener('DOMContentLoaded', () => {
   const canvasEngine = initCanvas('canvas');
-  console.log('[Main] Full-bleed CanvasEngine initialized with paper background:', CANVAS_BG_COLOR);
 
+  // DOM Elements
   const cursorOverlayEl = document.getElementById('cursor-overlay') as HTMLElement;
   const presenceContainerEl = document.getElementById('presence-container') as HTMLElement;
+  const liveIndicatorEl = document.getElementById('live-indicator') as HTMLElement;
+  const connectionPillEl = document.getElementById('connection-pill') as HTMLElement;
+  const connectionTextEl = document.getElementById('connection-text') as HTMLElement;
+
+  const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
+  const toolEraserBtn = document.getElementById('tool-eraser') as HTMLButtonElement;
+  const widthSlider = document.getElementById('stroke-width-slider') as HTMLInputElement;
+  const widthDotPreview = document.getElementById('width-dot-preview') as HTMLElement;
+  const swatchPalette = document.getElementById('swatch-palette') as HTMLElement;
+  const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
+  const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
 
   const cursorManager = new CursorOverlayManager(cursorOverlayEl);
 
@@ -17,11 +28,152 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const presenceUI = new PresenceUI(presenceContainerEl, userId);
 
+  // Update live indicator based on connected user count
+  presenceUI.onCountChange = (count: number) => {
+    if (count >= 2) {
+      liveIndicatorEl.classList.remove('is-hidden');
+    } else {
+      liveIndicatorEl.classList.add('is-hidden');
+    }
+  };
+
   canvasEngine.setUserId(userId);
 
   const wsClient = new WebSocketClient();
 
-  // Send throttled cursor movements to server
+  // Update Connection Status Pill
+  function updateConnectionStatus(state: ConnectionState): void {
+    connectionPillEl.className = 'connection-pill';
+
+    switch (state) {
+      case 'connected':
+        connectionPillEl.classList.add('status-connected');
+        connectionTextEl.textContent = 'Connected';
+        break;
+      case 'reconnecting':
+        connectionPillEl.classList.add('status-reconnecting');
+        connectionTextEl.textContent = 'Reconnecting...';
+        break;
+      case 'connecting':
+        connectionPillEl.classList.add('status-connecting');
+        connectionTextEl.textContent = 'Connecting...';
+        break;
+      case 'disconnected':
+      default:
+        connectionPillEl.classList.add('status-offline');
+        connectionTextEl.textContent = 'Offline';
+        break;
+    }
+  }
+
+  // ==========================================================================
+  // Toolbar Event Wiring
+  // ==========================================================================
+
+  function updateSizePreview(size: number, color?: string): void {
+    const clampedPx = Math.min(22, Math.max(3, size));
+    widthDotPreview.style.width = `${clampedPx}px`;
+    widthDotPreview.style.height = `${clampedPx}px`;
+    if (color) {
+      widthDotPreview.style.backgroundColor = color;
+    }
+  }
+
+  // Tool Selection
+  toolBrushBtn.addEventListener('click', () => {
+    canvasEngine.setTool('brush');
+    toolBrushBtn.classList.add('is-active');
+    toolEraserBtn.classList.remove('is-active');
+  });
+
+  toolEraserBtn.addEventListener('click', () => {
+    canvasEngine.setTool('eraser');
+    toolEraserBtn.classList.add('is-active');
+    toolBrushBtn.classList.remove('is-active');
+  });
+
+  // Stroke Width
+  widthSlider.addEventListener('input', (e) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    canvasEngine.setWidth(val);
+    updateSizePreview(val);
+  });
+
+  // Curated Color Swatches
+  const swatchButtons = swatchPalette.querySelectorAll('.swatch-btn');
+  swatchButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const color = btn.getAttribute('data-color');
+      if (!color) return;
+
+      swatchButtons.forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      canvasEngine.setColor(color);
+      updateSizePreview(canvasEngine.getWidth(), color);
+
+      // Auto-activate brush tool if eraser was active
+      if (canvasEngine.getTool() === 'eraser') {
+        canvasEngine.setTool('brush');
+        toolBrushBtn.classList.add('is-active');
+        toolEraserBtn.classList.remove('is-active');
+      }
+    });
+  });
+
+  function selectColorSwatch(color: string): void {
+    let found = false;
+    swatchButtons.forEach((btn) => {
+      if (btn.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()) {
+        btn.classList.add('is-active');
+        found = true;
+      } else {
+        btn.classList.remove('is-active');
+      }
+    });
+    if (!found) {
+      // If server assigned an unlisted color, still apply it
+      canvasEngine.setColor(color);
+    }
+    updateSizePreview(canvasEngine.getWidth(), color);
+  }
+
+  // Undo / Redo
+  btnUndo.addEventListener('click', () => {
+    wsClient.send({ type: 'undo' });
+  });
+
+  btnRedo.addEventListener('click', () => {
+    wsClient.send({ type: 'redo' });
+  });
+
+  // Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'b' || e.key === 'B') {
+      toolBrushBtn.click();
+    } else if (e.key === 'e' || e.key === 'E') {
+      toolEraserBtn.click();
+    } else if (e.key === 'u' || e.key === 'U') {
+      btnUndo.click();
+    } else if (e.key === 'r' || e.key === 'R') {
+      btnRedo.click();
+    } else if (e.key === '+') {
+      const next = Math.min(36, canvasEngine.getWidth() + 2);
+      widthSlider.value = next.toString();
+      canvasEngine.setWidth(next);
+      updateSizePreview(next);
+    } else if (e.key === '-') {
+      const next = Math.max(1, canvasEngine.getWidth() - 2);
+      widthSlider.value = next.toString();
+      canvasEngine.setWidth(next);
+      updateSizePreview(next);
+    }
+  });
+
+  // ==========================================================================
+  // Pointer Movement (Throttled cursor-move)
+  // ==========================================================================
+
   window.addEventListener('pointermove', (e: PointerEvent) => {
     wsClient.send({
       type: 'cursor-move',
@@ -30,7 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Wire local canvas stroke events to WebSocket messages
+  // ==========================================================================
+  // Canvas Local Events to WebSocket Messages
+  // ==========================================================================
+
   canvasEngine.onStrokeStart = (stroke) => {
     const firstPoint = stroke.points[0];
     wsClient.send({
@@ -60,33 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Keyboard shortcuts
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'b' || e.key === 'B') {
-      canvasEngine.setTool('brush');
-      console.log('[Canvas] Tool set to brush');
-    } else if (e.key === 'e' || e.key === 'E') {
-      canvasEngine.setTool('eraser');
-      console.log('[Canvas] Tool set to eraser');
-    } else if (e.key === 'u' || e.key === 'U') {
-      console.log('[Main] Triggering Undo...');
-      wsClient.send({ type: 'undo' });
-    } else if (e.key === 'r' || e.key === 'R') {
-      console.log('[Main] Triggering Redo...');
-      wsClient.send({ type: 'redo' });
-    } else if (e.key === '+') {
-      canvasEngine.setWidth(canvasEngine.getWidth() + 2);
-      console.log(`[Canvas] Width increased to ${canvasEngine.getWidth()}`);
-    } else if (e.key === '-') {
-      canvasEngine.setWidth(Math.max(1, canvasEngine.getWidth() - 2));
-      console.log(`[Canvas] Width decreased to ${canvasEngine.getWidth()}`);
-    }
-  });
+  // ==========================================================================
+  // WebSocket Lifecycle & Incoming Messages
+  // ==========================================================================
 
   wsClient.onStateChange((state) => {
-    console.log(`[Main] Connection state changed: ${state}`);
+    updateConnectionStatus(state);
     if (state === 'connected') {
-      console.log(`[Main] Sending join for room "${roomId}" as user "${userId}"...`);
       wsClient.send({
         type: 'join',
         roomId,
@@ -98,8 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
   wsClient.onMessage((message) => {
     switch (message.type) {
       case 'welcome': {
-        console.log(`[Main] Joined room! Assigned color: ${message.assignedColor}. Active users:`, message.presence);
         canvasEngine.setColor(message.assignedColor);
+        selectColorSwatch(message.assignedColor);
         canvasEngine.redraw(message.snapshot.strokes);
 
         presenceUI.setLocalUserId(message.userId);
@@ -108,13 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       case 'user-joined': {
-        console.log(`[Main] User joined: ${message.userId} (color: ${message.color})`);
         presenceUI.addUser(message.userId, message.color);
         break;
       }
 
       case 'user-left': {
-        console.log(`[Main] User left: ${message.userId}`);
         presenceUI.removeUser(message.userId);
         cursorManager.removeCursor(message.userId);
         break;
@@ -150,14 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'undo-applied':
-        console.log(`[Main] Undo applied by ${message.userId} for stroke ${message.strokeId}`);
         if (message.strokes) {
           canvasEngine.redraw(message.strokes);
         }
         break;
 
       case 'redo-applied':
-        console.log(`[Main] Redo applied by ${message.userId} for stroke ${message.stroke.id}`);
         if (message.strokes) {
           canvasEngine.redraw(message.strokes);
         }
@@ -168,6 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Initial preview state
+  updateSizePreview(canvasEngine.getWidth(), canvasEngine.getColor());
+
   wsClient.connect();
-  console.log('[Main] Collaborative drawing client with presence & cursor tracking initialized.');
+  console.log('[Main] Modern Studio client initialized.');
 });

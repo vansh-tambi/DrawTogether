@@ -4,12 +4,112 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DrawTogether</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <!-- Header / Wordmark -->
+  <header class="app-header">
+    <div class="brand-group">
+      <h1 class="brand-title">DrawTogether</h1>
+      <span id="live-indicator" class="live-indicator is-hidden" title="Live collaboration active">
+        <span class="live-dot"></span>
+        <span class="live-label">LIVE</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Top-Right Status & Presence Cluster -->
+  <aside class="top-right-cluster" aria-label="Room Status and Presence">
+    <!-- Connection Status Pill -->
+    <div id="connection-pill" class="connection-pill status-connecting">
+      <span class="connection-dot"></span>
+      <span id="connection-text" class="connection-text">Connecting...</span>
+    </div>
+
+    <!-- Presence Strip -->
+    <div id="presence-container" class="presence-strip"></div>
+  </aside>
+
+  <!-- Full-Bleed Canvas -->
   <canvas id="canvas"></canvas>
+
+  <!-- Remote Cursor Overlay -->
   <div id="cursor-overlay" class="cursor-overlay"></div>
-  <div id="presence-container" class="presence-container"></div>
+
+  <!-- Floating Pill Toolbar (Bottom-Center) -->
+  <nav class="studio-toolbar" aria-label="Drawing Tools">
+    <!-- Tool Selector -->
+    <div class="toolbar-group tool-selector">
+      <button id="tool-brush" class="toolbar-btn is-active" title="Brush (B)" aria-label="Brush Tool">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
+        </svg>
+      </button>
+      <button id="tool-eraser" class="toolbar-btn" title="Eraser (E)" aria-label="Eraser Tool">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+          <path d="M22 21H7"/>
+          <path d="m5 11 9 9"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Stroke Width Slider & Live Preview -->
+    <div class="toolbar-group width-group">
+      <div class="width-preview-wrapper" title="Current stroke size">
+        <div id="width-dot-preview" class="width-dot-preview"></div>
+      </div>
+      <input
+        type="range"
+        id="stroke-width-slider"
+        class="width-slider"
+        min="1"
+        max="36"
+        value="4"
+        title="Stroke width (1-36px)"
+      />
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Curated Color Swatches -->
+    <div id="swatch-palette" class="toolbar-group swatch-palette" aria-label="Color Palette">
+      <button class="swatch-btn is-active" data-color="#1F1B2E" style="--swatch-color: #1F1B2E;" title="Ink Noir"></button>
+      <button class="swatch-btn" data-color="#5B4FE9" style="--swatch-color: #5B4FE9;" title="Studio Violet"></button>
+      <button class="swatch-btn" data-color="#2563EB" style="--swatch-color: #2563EB;" title="Cobalt Blue"></button>
+      <button class="swatch-btn" data-color="#0891B2" style="--swatch-color: #0891B2;" title="Teal"></button>
+      <button class="swatch-btn" data-color="#059669" style="--swatch-color: #059669;" title="Emerald"></button>
+      <button class="swatch-btn" data-color="#D97706" style="--swatch-color: #D97706;" title="Warm Amber"></button>
+      <button class="swatch-btn" data-color="#FF6B5E" style="--swatch-color: #FF6B5E;" title="Coral"></button>
+      <button class="swatch-btn" data-color="#DB2777" style="--swatch-color: #DB2777;" title="Pink Rose"></button>
+      <button class="swatch-btn" data-color="#7C3AED" style="--swatch-color: #7C3AED;" title="Purple"></button>
+      <button class="swatch-btn" data-color="#475569" style="--swatch-color: #475569;" title="Slate"></button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Quick Actions (Undo / Redo) -->
+    <div class="toolbar-group history-group">
+      <button id="btn-undo" class="toolbar-btn icon-only" title="Undo (U)" aria-label="Undo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7v6h6"/>
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+        </svg>
+      </button>
+      <button id="btn-redo" class="toolbar-btn icon-only" title="Redo (R)" aria-label="Redo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 7v6h-6"/>
+          <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

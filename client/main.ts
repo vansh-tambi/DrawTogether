@@ -5,6 +5,7 @@ import { PresenceUI } from './presence';
 
 document.addEventListener('DOMContentLoaded', () => {
   const canvasEngine = initCanvas('canvas');
+  const canvasEl = document.getElementById('canvas') as HTMLCanvasElement;
 
   // DOM Elements
   const cursorOverlayEl = document.getElementById('cursor-overlay') as HTMLElement;
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const liveIndicatorEl = document.getElementById('live-indicator') as HTMLElement;
   const connectionPillEl = document.getElementById('connection-pill') as HTMLElement;
   const connectionTextEl = document.getElementById('connection-text') as HTMLElement;
+  const toastContainerEl = document.getElementById('toast-container') as HTMLElement;
 
   const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
   const toolEraserBtn = document.getElementById('tool-eraser') as HTMLButtonElement;
@@ -27,6 +29,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const roomId = 'default-room';
 
   const presenceUI = new PresenceUI(presenceContainerEl, userId);
+
+  function formatShortId(id: string): string {
+    if (id.length <= 10) return id;
+    return `${id.substring(0, 8)}…`;
+  }
+
+  // ==========================================================================
+  // Toast Notification System
+  // ==========================================================================
+
+  function showToast(message: string, colorDot?: string): void {
+    if (!toastContainerEl) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-card';
+
+    if (colorDot) {
+      const dot = document.createElement('span');
+      dot.className = 'toast-dot';
+      dot.style.backgroundColor = colorDot;
+      toast.appendChild(dot);
+    }
+
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
+
+    toastContainerEl.appendChild(toast);
+
+    // Auto-dismiss after 2.8 seconds
+    setTimeout(() => {
+      toast.classList.add('toast-leaving');
+      setTimeout(() => {
+        toast.remove();
+      }, 190);
+    }, 2800);
+  }
+
+  // Canvas redraw cross-fade blend animation
+  function triggerCanvasRedrawBlend(): void {
+    if (!canvasEl) return;
+    canvasEl.classList.add('canvas-fade-blend');
+    setTimeout(() => {
+      canvasEl.classList.remove('canvas-fade-blend');
+    }, 120);
+  }
 
   // Update live indicator based on connected user count
   presenceUI.onCountChange = (count: number) => {
@@ -132,19 +180,27 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     if (!found) {
-      // If server assigned an unlisted color, still apply it
       canvasEngine.setColor(color);
     }
     updateSizePreview(canvasEngine.getWidth(), color);
   }
 
-  // Undo / Redo
+  // Undo / Redo with transient busy flash
+  let undoTimeout: ReturnType<typeof setTimeout> | null = null;
+  let redoTimeout: ReturnType<typeof setTimeout> | null = null;
+
   btnUndo.addEventListener('click', () => {
+    btnUndo.classList.add('is-busy');
     wsClient.send({ type: 'undo' });
+    if (undoTimeout) clearTimeout(undoTimeout);
+    undoTimeout = setTimeout(() => btnUndo.classList.remove('is-busy'), 600);
   });
 
   btnRedo.addEventListener('click', () => {
+    btnRedo.classList.add('is-busy');
     wsClient.send({ type: 'redo' });
+    if (redoTimeout) clearTimeout(redoTimeout);
+    redoTimeout = setTimeout(() => btnRedo.classList.remove('is-busy'), 600);
   });
 
   // Keyboard Shortcuts
@@ -244,12 +300,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'user-joined': {
         presenceUI.addUser(message.userId, message.color);
+        showToast(`${formatShortId(message.userId)} joined the board`, message.color);
         break;
       }
 
       case 'user-left': {
         presenceUI.removeUser(message.userId);
         cursorManager.removeCursor(message.userId);
+        showToast(`${formatShortId(message.userId)} left the board`);
         break;
       }
 
@@ -283,13 +341,17 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'undo-applied':
+        btnUndo.classList.remove('is-busy');
         if (message.strokes) {
+          triggerCanvasRedrawBlend();
           canvasEngine.redraw(message.strokes);
         }
         break;
 
       case 'redo-applied':
+        btnRedo.classList.remove('is-busy');
         if (message.strokes) {
+          triggerCanvasRedrawBlend();
           canvasEngine.redraw(message.strokes);
         }
         break;
@@ -303,5 +365,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSizePreview(canvasEngine.getWidth(), canvasEngine.getColor());
 
   wsClient.connect();
-  console.log('[Main] Modern Studio client initialized.');
+  console.log('[Main] Modern Studio client with motion and feedback initialized.');
 });

@@ -80,6 +80,11 @@ canvas#canvas {
   height: 100vh;
   touch-action: none;
   background-color: var(--color-canvas-bg);
+  transition: opacity 120ms ease-out;
+}
+
+canvas#canvas.canvas-fade-blend {
+  opacity: 0.92;
 }
 
 /* ==========================================================================
@@ -338,19 +343,34 @@ canvas#canvas {
 }
 
 .toolbar-btn:hover {
-  background: rgba(31, 27, 46, 0.05);
-  color: var(--color-ink);
-  transform: scale(1.04);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.06);
 }
 
 .toolbar-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .toolbar-btn.is-active {
   background: var(--color-primary);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(91, 79, 233, 0.35);
+}
+
+.toolbar-btn.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
+  transform: scale(0.92);
+  filter: brightness(0.92);
+  transition: all var(--transition-fast);
+}
+
+/* Accessibility Focus Rings */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Stroke Width Group */
@@ -488,6 +508,86 @@ canvas#canvas {
   letter-spacing: 0.02em;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+.remote-cursor.cursor-entering {
+  animation: cursorPop 240ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes cursorPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   Toast / Snackbar Stack (Stacked above toolbar)
+   ========================================================================== */
+
+.toast-container {
+  position: absolute;
+  bottom: calc(var(--space-6) + 54px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.toast-card {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px;
+  background: var(--color-surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-round);
+  box-shadow: var(--shadow-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-ink);
+  user-select: none;
+  animation: toastEnter 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.toast-card.toast-leaving {
+  opacity: 0;
+  transform: translateY(8px) scale(0.94);
+}
+
+@keyframes toastEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--color-primary);
 }
 
 /* ==========================================================================

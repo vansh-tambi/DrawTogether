@@ -96,8 +96,12 @@ export class CursorOverlayManager {
 
   private createCursorElement(userId: string, color: string): HTMLElement {
     const wrapper = document.createElement('div');
-    wrapper.className = 'remote-cursor';
+    wrapper.className = 'remote-cursor cursor-entering';
     wrapper.id = `cursor-${userId}`;
+
+    setTimeout(() => {
+      wrapper.classList.remove('cursor-entering');
+    }, 250);
 
     // Inline SVG cursor icon styled with user color
     wrapper.innerHTML = `

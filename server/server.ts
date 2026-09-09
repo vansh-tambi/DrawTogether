@@ -10,6 +10,22 @@ import { safeParseClientMessageJson, type ServerMessage, type Stroke } from '../
 // Map of in-progress strokes keyed by `${roomId}_${strokeId}`
 const activeStrokes = new Map<string, Stroke>();
 
+function cleanupActiveStrokesForUser(userId: string, roomId: string): void {
+  const room = rooms.getRoom(roomId);
+  for (const [key, stroke] of activeStrokes.entries()) {
+    if (stroke.userId === userId) {
+      if (stroke.points.length > 1) {
+        drawingState.recordStroke(roomId, stroke);
+        if (room) {
+          room.broadcast({ type: 'stroke-end', userId, strokeId: stroke.id }, userId);
+        }
+        console.log(`[Server] Finalized in-flight stroke "${stroke.id}" for disconnected user "${userId}".`);
+      }
+      activeStrokes.delete(key);
+    }
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -75,6 +91,10 @@ const wss = new WebSocketServer({ server });
 // Start bounded heartbeat (10 seconds)
 rooms.startHeartbeat(10000, (room, client) => {
   console.log(`[Server] Pruned dead client "${client.userId}" from room "${room.id}".`);
+  cleanupActiveStrokesForUser(client.userId, room.id);
+  if (rooms.removeRoomIfEmpty(room.id)) {
+    drawingState.cleanRoom(room.id);
+  }
 });
 
 wss.on('connection', (ws: WebSocket, req) => {
@@ -306,6 +326,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);
           if (room) {
+            cleanupActiveStrokesForUser(currentUserId, currentRoomId);
             room.removeClient(currentUserId);
             console.log(`[Server] User "${currentUserId}" left room "${currentRoomId}".`);
             room.broadcast({ type: 'user-left', userId: currentUserId });
@@ -329,6 +350,7 @@ wss.on('connection', (ws: WebSocket, req) => {
     if (currentRoomId && currentUserId) {
       const room = rooms.getRoom(currentRoomId);
       if (room) {
+        cleanupActiveStrokesForUser(currentUserId, currentRoomId);
         room.removeClient(currentUserId);
         console.log(
           `[Server] Socket closed: User "${currentUserId}" left room "${currentRoomId}" (code=${code} reason="${reason.toString()}"). Users remaining: ${room.clients.size}`
@@ -342,8 +364,12 @@ wss.on('connection', (ws: WebSocket, req) => {
       // Check registry fallback
       const found = rooms.removeClientBySocket(ws);
       if (found) {
+        cleanupActiveStrokesForUser(found.client.userId, found.room.id);
         console.log(`[Server] Removed untracked socket user "${found.client.userId}" from room "${found.room.id}".`);
         found.room.broadcast({ type: 'user-left', userId: found.client.userId });
+        if (rooms.removeRoomIfEmpty(found.room.id)) {
+          drawingState.cleanRoom(found.room.id);
+        }
       }
     }
   });

@@ -287,77 +287,92 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   wsClient.onMessage((message) => {
-    switch (message.type) {
-      case 'welcome': {
-        canvasEngine.setColor(message.assignedColor);
-        selectColorSwatch(message.assignedColor);
-        canvasEngine.redraw(message.snapshot.strokes);
+    try {
+      switch (message.type) {
+        case 'welcome': {
+          canvasEngine.setColor(message.assignedColor);
+          selectColorSwatch(message.assignedColor);
 
-        presenceUI.setLocalUserId(message.userId);
-        presenceUI.setUsers(message.presence);
-        break;
-      }
+          // Authoritative reset from fresh server snapshot
+          cursorManager.clear();
+          canvasEngine.clearRemoteStrokes();
+          canvasEngine.redraw(message.snapshot.strokes);
 
-      case 'user-joined': {
-        presenceUI.addUser(message.userId, message.color);
-        showToast(`${formatShortId(message.userId)} joined the board`, message.color);
-        break;
-      }
+          presenceUI.setLocalUserId(message.userId);
+          presenceUI.setUsers(message.presence);
 
-      case 'user-left': {
-        presenceUI.removeUser(message.userId);
-        cursorManager.removeCursor(message.userId);
-        showToast(`${formatShortId(message.userId)} left the board`);
-        break;
-      }
-
-      case 'cursor-move': {
-        const color = presenceUI.getUserColor(message.userId);
-        cursorManager.updateCursor(message.userId, { x: message.x, y: message.y }, color);
-        break;
-      }
-
-      case 'stroke-start':
-        canvasEngine.startRemoteStroke(
-          message.userId,
-          message.id,
-          message.x,
-          message.y,
-          message.color,
-          message.width,
-          message.tool
-        );
-        break;
-
-      case 'stroke-point':
-        canvasEngine.addRemoteStrokePoint(message.userId, message.strokeId, {
-          x: message.x,
-          y: message.y,
-        });
-        break;
-
-      case 'stroke-end':
-        canvasEngine.endRemoteStroke(message.userId, message.strokeId);
-        break;
-
-      case 'undo-applied':
-        btnUndo.classList.remove('is-busy');
-        if (message.strokes) {
-          triggerCanvasRedrawBlend();
-          canvasEngine.redraw(message.strokes);
+          // If strokes occurred while connection was interrupted, stream them now
+          if (wsClient.hasOfflineMessages()) {
+            console.log('[Main] Flushing offline buffered strokes to server...');
+            wsClient.flushOfflineQueue();
+          }
+          break;
         }
-        break;
 
-      case 'redo-applied':
-        btnRedo.classList.remove('is-busy');
-        if (message.strokes) {
-          triggerCanvasRedrawBlend();
-          canvasEngine.redraw(message.strokes);
+        case 'user-joined': {
+          presenceUI.addUser(message.userId, message.color);
+          showToast(`${formatShortId(message.userId)} joined the board`, message.color);
+          break;
         }
-        break;
 
-      default:
-        break;
+        case 'user-left': {
+          presenceUI.removeUser(message.userId);
+          cursorManager.removeCursor(message.userId);
+          canvasEngine.cleanRemoteStrokesForUser(message.userId);
+          showToast(`${formatShortId(message.userId)} left the board`);
+          break;
+        }
+
+        case 'cursor-move': {
+          const color = presenceUI.getUserColor(message.userId);
+          cursorManager.updateCursor(message.userId, { x: message.x, y: message.y }, color);
+          break;
+        }
+
+        case 'stroke-start':
+          canvasEngine.startRemoteStroke(
+            message.userId,
+            message.id,
+            message.x,
+            message.y,
+            message.color,
+            message.width,
+            message.tool
+          );
+          break;
+
+        case 'stroke-point':
+          canvasEngine.addRemoteStrokePoint(message.userId, message.strokeId, {
+            x: message.x,
+            y: message.y,
+          });
+          break;
+
+        case 'stroke-end':
+          canvasEngine.endRemoteStroke(message.userId, message.strokeId);
+          break;
+
+        case 'undo-applied':
+          btnUndo.classList.remove('is-busy');
+          if (message.strokes) {
+            triggerCanvasRedrawBlend();
+            canvasEngine.redraw(message.strokes);
+          }
+          break;
+
+        case 'redo-applied':
+          btnRedo.classList.remove('is-busy');
+          if (message.strokes) {
+            triggerCanvasRedrawBlend();
+            canvasEngine.redraw(message.strokes);
+          }
+          break;
+
+        default:
+          break;
+      }
+    } catch (err) {
+      console.error('[Main] Error handling server message:', err, message);
     }
   });
 

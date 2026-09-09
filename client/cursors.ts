@@ -61,6 +61,11 @@ export class CursorOverlayManager {
 
       this.cursors.set(userId, cursor);
       this.applyTransform(cursor);
+
+      // Resume animation loop if it was idle
+      if (this.animationFrameId === null) {
+        this.startAnimationLoop();
+      }
     } else {
       cursor.targetX = targetPoint.x;
       cursor.targetY = targetPoint.y;
@@ -69,6 +74,10 @@ export class CursorOverlayManager {
       if (color && color !== cursor.color) {
         cursor.color = color;
         this.updateCursorColor(cursor, color);
+      }
+
+      if (this.animationFrameId === null) {
+        this.startAnimationLoop();
       }
     }
   }
@@ -82,6 +91,10 @@ export class CursorOverlayManager {
       cursor.element.remove();
       this.cursors.delete(userId);
     }
+    if (this.cursors.size === 0 && this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
   }
 
   /**
@@ -92,6 +105,10 @@ export class CursorOverlayManager {
       cursor.element.remove();
     }
     this.cursors.clear();
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
   }
 
   private createCursorElement(userId: string, color: string): HTMLElement {
@@ -136,7 +153,15 @@ export class CursorOverlayManager {
   }
 
   private startAnimationLoop(): void {
+    if (this.animationFrameId !== null) return;
+
+    this.lastFrameTime = performance.now();
     const tick = (now: number) => {
+      if (this.cursors.size === 0) {
+        this.animationFrameId = null;
+        return;
+      }
+
       const dt = Math.max(1, Math.min(100, now - this.lastFrameTime));
       this.lastFrameTime = now;
 

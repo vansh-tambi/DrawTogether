@@ -75,11 +75,14 @@
         </svg>
       </button>
 
-      <!-- Settings Gear Icon -->
-      <button id="btn-settings" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      <!-- Theme Toggle -->
+      <button id="btn-settings" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="theme-icon theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <svg class="theme-icon theme-icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
         </svg>
       </button>
     </div>
@@ -235,15 +238,26 @@
           <button class="swatch-btn" data-color="#FEF3C7" style="--swatch-color: #FEF3C7;" title="Cream"></button>
         </div>
 
-        <!-- Custom Color Picker Button -->
-        <div class="relative mt-1.5 flex justify-center">
-          <button id="btn-custom-color" class="w-7 h-7 rounded-full border border-dashed border-zinc-300/60 hover:border-zinc-400 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-sm bg-white/40 backdrop-blur-sm" title="Custom Color Picker">
+        <!-- Custom Color Picker -->
+        <div id="custom-color-picker" class="relative mt-1.5 flex justify-center">
+          <button id="btn-custom-color" class="custom-color-trigger w-7 h-7 rounded-full border border-dashed border-zinc-300/60 hover:border-zinc-400 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-sm bg-white/40 backdrop-blur-sm" title="Choose a custom color" aria-label="Choose a custom color" aria-expanded="false" aria-controls="custom-color-popover">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
           </button>
-          <input type="color" id="custom-color-input" class="sr-only" value="#5B4FE9" />
+          <div id="custom-color-popover" class="custom-color-popover hidden" role="dialog" aria-label="Custom color picker">
+            <div class="custom-color-popover-header">
+              <span>Custom color</span>
+              <button id="btn-custom-color-close" type="button" class="custom-color-close" aria-label="Close color picker">×</button>
+            </div>
+            <input type="color" id="custom-color-input" class="custom-color-input" value="#5B4FE9" aria-label="Choose custom color" />
+            <div class="custom-color-value-row">
+              <input id="custom-color-hex" class="custom-color-hex" type="text" value="#5B4FE9" maxlength="7" spellcheck="false" aria-label="Hex color value" />
+              <button id="btn-custom-color-apply" type="button" class="custom-color-apply">Use</button>
+            </div>
+            <span id="custom-color-error" class="custom-color-error" role="status" aria-live="polite"></span>
+          </div>
         </div>
       </div>
     </div>

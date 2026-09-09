@@ -5,6 +5,7 @@ import { eraseStrokeSegmentAt } from './geometry';
  * Off-white "paper" tone for DrawTogether visual theme.
  */
 export const CANVAS_BG_COLOR = '#F5F0E8';
+export const DARK_CANVAS_BG_COLOR = '#1B1726';
 
 export interface CanvasEngineOptions {
   canvas: HTMLCanvasElement;
@@ -38,6 +39,10 @@ export class CanvasEngine {
   private currentColor = '#2563eb';
   private currentWidth = 4;
   private userId: string;
+  private theme: 'light' | 'dark' = 'light';
+  private panOffset: Point = { x: 0, y: 0 };
+  private panStartClient: Point | null = null;
+  private panStartOffset: Point | null = null;
 
   // Stroke state
   private strokes: Stroke[] = [];
@@ -102,7 +107,27 @@ export class CanvasEngine {
   // ==========================================================================
 
   public setTool(tool: 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan'): void {
+    if (this.currentTool === 'pan' && tool !== 'pan') {
+      if (this.activePointerId !== null) {
+        try {
+          if (this.canvas.hasPointerCapture(this.activePointerId)) {
+            this.canvas.releasePointerCapture(this.activePointerId);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      this.isPointerDown = false;
+      this.activePointerId = null;
+      this.panStartClient = null;
+      this.panStartOffset = null;
+    }
     this.currentTool = tool;
+  }
+
+  public setTheme(theme: 'light' | 'dark'): void {
+    this.theme = theme;
+    this.redraw(this.strokes);
   }
 
   public getTool(): 'brush' | 'eraser' | 'segment-eraser' | 'highlighter' | 'pan' {
@@ -135,6 +160,10 @@ export class CanvasEngine {
     return [...this.strokes];
   }
 
+  private getCanvasBackgroundColor(): string {
+    return this.theme === 'dark' ? DARK_CANVAS_BG_COLOR : CANVAS_BG_COLOR;
+  }
+
   // ==========================================================================
   // Canvas Rendering & Replay API
   // ==========================================================================
@@ -148,21 +177,26 @@ export class CanvasEngine {
     const height = this.canvas.height / dpr;
 
     this.ctx.save();
-    this.ctx.fillStyle = CANVAS_BG_COLOR;
+    this.ctx.fillStyle = this.getCanvasBackgroundColor();
     this.ctx.fillRect(0, 0, width, height);
 
     // Subtle architect / whiteboard dot grid
-    this.ctx.fillStyle = '#DDD8CC';
+    this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
+    this.ctx.fillStyle = this.theme === 'dark' ? '#3A3349' : '#DDD8CC';
     const spacing = 28;
     const dotRadius = 1;
-    for (let x = spacing; x < width; x += spacing) {
-      for (let y = spacing; y < height; y += spacing) {
+    const firstX = Math.floor((-this.panOffset.x - spacing) / spacing) * spacing;
+    const firstY = Math.floor((-this.panOffset.y - spacing) / spacing) * spacing;
+    for (let x = firstX; x < width - this.panOffset.x + spacing; x += spacing) {
+      for (let y = firstY; y < height - this.panOffset.y + spacing; y += spacing) {
         this.ctx.beginPath();
         this.ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
         this.ctx.fill();
       }
     }
 
+    this.ctx.restore();
     this.ctx.restore();
   }
 
@@ -179,12 +213,13 @@ export class CanvasEngine {
     if (!points || points.length === 0) return;
 
     this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
 
     if (tool === 'eraser') {
-      this.ctx.strokeStyle = CANVAS_BG_COLOR;
-      this.ctx.fillStyle = CANVAS_BG_COLOR;
+      this.ctx.strokeStyle = this.getCanvasBackgroundColor();
+      this.ctx.fillStyle = this.getCanvasBackgroundColor();
       this.ctx.lineWidth = width;
     } else if (tool === 'highlighter') {
       this.ctx.globalAlpha = 0.35;
@@ -299,8 +334,9 @@ export class CanvasEngine {
 
     // Draw initial dot for remote user immediately
     this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
     if (tool === 'eraser') {
-      this.ctx.fillStyle = CANVAS_BG_COLOR;
+      this.ctx.fillStyle = this.getCanvasBackgroundColor();
     } else {
       this.ctx.fillStyle = color;
       if (tool === 'highlighter') {
@@ -323,10 +359,11 @@ export class CanvasEngine {
     active.stroke.points.push(point);
 
     this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     if (active.stroke.tool === 'eraser') {
-      this.ctx.strokeStyle = CANVAS_BG_COLOR;
+      this.ctx.strokeStyle = this.getCanvasBackgroundColor();
     } else {
       this.ctx.strokeStyle = active.stroke.color;
       if (active.stroke.tool === 'highlighter') {
@@ -376,10 +413,11 @@ export class CanvasEngine {
 
     if (active.prevMidPoint && active.prevPoint) {
       this.ctx.save();
+      this.ctx.translate(this.panOffset.x, this.panOffset.y);
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
       if (active.stroke.tool === 'eraser') {
-        this.ctx.strokeStyle = CANVAS_BG_COLOR;
+        this.ctx.strokeStyle = this.getCanvasBackgroundColor();
       } else {
         this.ctx.strokeStyle = active.stroke.color;
         if (active.stroke.tool === 'highlighter') {
@@ -428,8 +466,8 @@ export class CanvasEngine {
   private getCoordinates(e: PointerEvent): Point {
     const rect = this.canvas.getBoundingClientRect();
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: e.clientX - rect.left - this.panOffset.x,
+      y: e.clientY - rect.top - this.panOffset.y,
     };
   }
 
@@ -459,6 +497,13 @@ export class CanvasEngine {
     if (this.currentTool === 'pan') {
       this.isPointerDown = true;
       this.activePointerId = e.pointerId;
+      this.panStartClient = { x: e.clientX, y: e.clientY };
+      this.panStartOffset = { ...this.panOffset };
+      try {
+        this.canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore in environments without pointer capture
+      }
       return;
     }
 
@@ -495,8 +540,9 @@ export class CanvasEngine {
 
     // Draw initial dot immediately
     this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
     if (this.currentTool === 'eraser') {
-      this.ctx.fillStyle = CANVAS_BG_COLOR;
+      this.ctx.fillStyle = this.getCanvasBackgroundColor();
     } else if (this.currentTool === 'highlighter') {
       this.ctx.globalAlpha = 0.35;
       this.ctx.fillStyle = this.currentColor;
@@ -515,9 +561,21 @@ export class CanvasEngine {
   }
 
   private handlePointerMove(e: PointerEvent): void {
-    if (!this.isPointerDown || !this.activeStroke || this.activePointerId !== e.pointerId) {
+    if (!this.isPointerDown || this.activePointerId !== e.pointerId) {
       return;
     }
+
+    if (this.currentTool === 'pan') {
+      if (!this.panStartClient || !this.panStartOffset) return;
+      this.panOffset = {
+        x: this.panStartOffset.x + e.clientX - this.panStartClient.x,
+        y: this.panStartOffset.y + e.clientY - this.panStartClient.y,
+      };
+      this.redraw(this.strokes);
+      return;
+    }
+
+    if (!this.activeStroke) return;
 
     const currentPoint = this.getCoordinates(e);
     const lastPoint = this.prevPoint;
@@ -533,10 +591,11 @@ export class CanvasEngine {
     this.activeStroke.points.push(currentPoint);
 
     this.ctx.save();
+    this.ctx.translate(this.panOffset.x, this.panOffset.y);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     if (this.activeStroke.tool === 'eraser') {
-      this.ctx.strokeStyle = CANVAS_BG_COLOR;
+      this.ctx.strokeStyle = this.getCanvasBackgroundColor();
     } else if (this.activeStroke.tool === 'highlighter') {
       this.ctx.globalAlpha = 0.35;
       this.ctx.strokeStyle = this.activeStroke.color;
@@ -587,6 +646,15 @@ export class CanvasEngine {
     if (this.currentTool === 'pan') {
       this.isPointerDown = false;
       this.activePointerId = null;
+      this.panStartClient = null;
+      this.panStartOffset = null;
+      try {
+        if (this.canvas.hasPointerCapture(e.pointerId)) {
+          this.canvas.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // ignore
+      }
       return;
     }
 
@@ -609,10 +677,11 @@ export class CanvasEngine {
     if (this.prevMidPoint && lastPoint) {
       // Connect to final point
       this.ctx.save();
+      this.ctx.translate(this.panOffset.x, this.panOffset.y);
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
       if (this.activeStroke.tool === 'eraser') {
-        this.ctx.strokeStyle = CANVAS_BG_COLOR;
+        this.ctx.strokeStyle = this.getCanvasBackgroundColor();
       } else if (this.activeStroke.tool === 'highlighter') {
         this.ctx.globalAlpha = 0.35;
         this.ctx.strokeStyle = this.activeStroke.color;

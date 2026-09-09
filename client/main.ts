@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const presenceContainerEl = document.getElementById('presence-container') as HTMLElement;
   const btnShare = document.getElementById('btn-share') as HTMLButtonElement;
   const btnInfo = document.getElementById('btn-info') as HTMLButtonElement;
+  const btnSettings = document.getElementById('btn-settings') as HTMLButtonElement;
 
   // DOM Elements - Floating Dock Tools
   const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
@@ -30,6 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const sizeReadout = document.getElementById('size-readout') as HTMLElement;
   const btnCustomColor = document.getElementById('btn-custom-color') as HTMLButtonElement;
   const customColorInput = document.getElementById('custom-color-input') as HTMLInputElement;
+  const customColorPicker = document.getElementById('custom-color-picker') as HTMLElement;
+  const customColorPopover = document.getElementById('custom-color-popover') as HTMLElement;
+  const customColorHex = document.getElementById('custom-color-hex') as HTMLInputElement;
+  const btnCustomColorClose = document.getElementById('btn-custom-color-close') as HTMLButtonElement;
+  const btnCustomColorApply = document.getElementById('btn-custom-color-apply') as HTMLButtonElement;
+  const customColorError = document.getElementById('custom-color-error') as HTMLElement;
 
   // DOM Elements - Color Tabs
   const tabPrimary = document.getElementById('tab-primary') as HTMLButtonElement;
@@ -96,6 +103,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 190);
     }, 2800);
   }
+
+  // ========================================================================
+  // Theme Toggle
+  // ========================================================================
+
+  function applyTheme(theme: 'light' | 'dark', announce = false): void {
+    const isDark = theme === 'dark';
+    document.documentElement.dataset.theme = theme;
+    document.body.classList.toggle('dark-mode', isDark);
+    canvasEngine.setTheme(theme);
+    btnSettings.setAttribute('aria-pressed', String(isDark));
+    btnSettings.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    btnSettings.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+
+    try {
+      window.localStorage.setItem('drawtogether-theme', theme);
+    } catch {
+      // Local storage may be unavailable in private or embedded contexts.
+    }
+
+    if (announce) {
+      showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled');
+    }
+  }
+
+  let savedTheme: string | null = null;
+  try {
+    savedTheme = window.localStorage.getItem('drawtogether-theme');
+  } catch {
+    // Use the light theme when local storage is unavailable.
+  }
+  applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+  btnSettings.addEventListener('click', () => {
+    const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+    applyTheme(nextTheme, true);
+  });
 
   // Canvas redraw cross-fade blend animation
   function triggerCanvasRedrawBlend(): void {
@@ -268,17 +311,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function selectColor(color: string): void {
     const swatchButtons = getAllSwatchButtons();
-    let found = false;
     swatchButtons.forEach((btn) => {
       if (btn.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()) {
         btn.classList.add('is-active');
-        found = true;
       } else {
         btn.classList.remove('is-active');
       }
     });
 
     canvasEngine.setColor(color);
+    customColorInput.value = color;
+    customColorHex.value = color.toUpperCase();
+    customColorError.textContent = '';
+    btnCustomColor.style.setProperty('--custom-color', color);
     updateSizeUI(canvasEngine.getWidth(), color);
 
     // Auto-switch to pen/brush if currently in an eraser mode
@@ -301,14 +346,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
   bindSwatchListeners();
 
-  // Custom Color Picker Button
+  // Custom Color Picker Popover
+  function normalizeHex(value: string): string | null {
+    const trimmed = value.trim().toUpperCase();
+    if (/^#[0-9A-F]{6}$/.test(trimmed)) return trimmed;
+    if (/^#[0-9A-F]{3}$/.test(trimmed)) {
+      return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+    }
+    return null;
+  }
+
+  function setCustomPickerOpen(isOpen: boolean): void {
+    customColorPopover.classList.toggle('hidden', !isOpen);
+    btnCustomColor.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) {
+      customColorHex.focus();
+      customColorHex.select();
+    }
+  }
+
+  function applyCustomColor(value: string): boolean {
+    const normalized = normalizeHex(value);
+    if (!normalized) {
+      customColorError.textContent = 'Use a valid hex value, e.g. #5B4FE9';
+      customColorHex.classList.add('is-invalid');
+      return false;
+    }
+
+    customColorError.textContent = '';
+    customColorHex.classList.remove('is-invalid');
+    customColorInput.value = normalized;
+    selectColor(normalized);
+    return true;
+  }
+
   btnCustomColor.addEventListener('click', () => {
-    customColorInput.click();
+    setCustomPickerOpen(customColorPopover.classList.contains('hidden'));
   });
 
   customColorInput.addEventListener('input', (e) => {
-    const val = (e.target as HTMLInputElement).value;
-    selectColor(val);
+    applyCustomColor((e.target as HTMLInputElement).value);
+  });
+
+  customColorHex.addEventListener('input', () => {
+    const normalized = normalizeHex(customColorHex.value);
+    if (normalized) {
+      customColorError.textContent = '';
+      customColorHex.classList.remove('is-invalid');
+      customColorInput.value = normalized;
+      selectColor(normalized);
+    } else {
+      customColorError.textContent = 'Use a valid hex value, e.g. #5B4FE9';
+      customColorHex.classList.add('is-invalid');
+    }
+  });
+
+  customColorHex.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (applyCustomColor(customColorHex.value)) setCustomPickerOpen(false);
+    }
+  });
+
+  btnCustomColorApply.addEventListener('click', () => {
+    if (applyCustomColor(customColorHex.value)) setCustomPickerOpen(false);
+  });
+
+  btnCustomColorClose.addEventListener('click', () => setCustomPickerOpen(false));
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!customColorPicker.contains(e.target as Node)) {
+      setCustomPickerOpen(false);
+    }
   });
 
   // ==========================================================================
@@ -392,6 +501,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') {
       modalClear.classList.remove('modal-open');
       modalInfo.classList.remove('modal-open');
+      setCustomPickerOpen(false);
+      return;
+    }
+
+    const target = e.target as HTMLElement | null;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) {
       return;
     }
 

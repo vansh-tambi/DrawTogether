@@ -9,7 +9,7 @@
 // Core Domain Models
 // ============================================================================
 
-export type ToolType = 'pen' | 'brush' | 'eraser' | string;
+export type ToolType = 'pen' | 'brush' | 'eraser' | 'segment-eraser' | string;
 
 export interface Point {
   x: number;
@@ -86,6 +86,12 @@ export interface LeaveClientMessage {
   type: 'leave';
 }
 
+export interface EraseSegmentClientMessage {
+  type: 'erase-segment';
+  targetStrokeId: string;
+  newStrokes: Stroke[];
+}
+
 export type ClientMessage =
   | JoinClientMessage
   | StrokeStartClientMessage
@@ -94,7 +100,8 @@ export type ClientMessage =
   | CursorMoveClientMessage
   | UndoClientMessage
   | RedoClientMessage
-  | LeaveClientMessage;
+  | LeaveClientMessage
+  | EraseSegmentClientMessage;
 
 // ============================================================================
 // Server Messages (Sent from Server to Client)
@@ -170,6 +177,14 @@ export interface RedoAppliedServerMessage {
   strokes?: Stroke[];
 }
 
+export interface SegmentErasedServerMessage {
+  type: 'segment-erased';
+  userId: string;
+  targetStrokeId: string;
+  newStrokes: Stroke[];
+  strokes?: Stroke[];
+}
+
 export type ServerMessage =
   | WelcomeServerMessage
   | UserJoinedServerMessage
@@ -180,7 +195,8 @@ export type ServerMessage =
   | RelayedStrokeEndServerMessage
   | RelayedCursorMoveServerMessage
   | UndoAppliedServerMessage
-  | RedoAppliedServerMessage;
+  | RedoAppliedServerMessage
+  | SegmentErasedServerMessage;
 
 // ============================================================================
 // Validation Types & Primitives
@@ -375,6 +391,23 @@ export function validateClientMessage(data: unknown): ValidationResult<ClientMes
 
     case 'leave': {
       return { success: true, data: { type: 'leave' } };
+    }
+
+    case 'erase-segment': {
+      if (!isNonEmptyString(data.targetStrokeId)) {
+        return { success: false, error: 'Invalid "erase-segment": "targetStrokeId" must be a non-empty string.' };
+      }
+      if (!Array.isArray(data.newStrokes) || !data.newStrokes.every(isStroke)) {
+        return { success: false, error: 'Invalid "erase-segment": "newStrokes" must be an array of valid Strokes.' };
+      }
+      return {
+        success: true,
+        data: {
+          type: 'erase-segment',
+          targetStrokeId: data.targetStrokeId,
+          newStrokes: data.newStrokes,
+        },
+      };
     }
 
     default:
@@ -605,6 +638,31 @@ export function validateServerMessage(data: unknown): ValidationResult<ServerMes
           type: 'redo-applied',
           userId: data.userId,
           stroke: data.stroke,
+          ...(data.strokes !== undefined ? { strokes: data.strokes as Stroke[] } : {}),
+        },
+      };
+    }
+
+    case 'segment-erased': {
+      if (!isNonEmptyString(data.userId)) {
+        return { success: false, error: 'Invalid "segment-erased": "userId" must be a non-empty string.' };
+      }
+      if (!isNonEmptyString(data.targetStrokeId)) {
+        return { success: false, error: 'Invalid "segment-erased": "targetStrokeId" must be a non-empty string.' };
+      }
+      if (!Array.isArray(data.newStrokes) || !data.newStrokes.every(isStroke)) {
+        return { success: false, error: 'Invalid "segment-erased": "newStrokes" must be an array of valid Strokes.' };
+      }
+      if (data.strokes !== undefined && (!Array.isArray(data.strokes) || !data.strokes.every(isStroke))) {
+        return { success: false, error: 'Invalid "segment-erased": "strokes" must be an array of valid Strokes.' };
+      }
+      return {
+        success: true,
+        data: {
+          type: 'segment-erased',
+          userId: data.userId,
+          targetStrokeId: data.targetStrokeId,
+          newStrokes: data.newStrokes,
           ...(data.strokes !== undefined ? { strokes: data.strokes as Stroke[] } : {}),
         },
       };

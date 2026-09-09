@@ -348,6 +348,29 @@ wss.on('connection', (ws: WebSocket, req) => {
         break;
       }
 
+      case 'erase-segment': {
+        if (currentRoomId && currentUserId) {
+          const room = rooms.getRoom(currentRoomId);
+          if (room) {
+            const result = drawingState.replaceStroke(currentRoomId, msg.targetStrokeId, msg.newStrokes);
+            if (result) {
+              console.log(
+                `[Server] User "${currentUserId}" erased segment on stroke "${msg.targetStrokeId}". Replaced with ${msg.newStrokes.length} stroke(s). Total visible: ${result.visibleStrokes.length}`
+              );
+              const segmentErasedMsg: ServerMessage = {
+                type: 'segment-erased',
+                userId: currentUserId,
+                targetStrokeId: msg.targetStrokeId,
+                newStrokes: msg.newStrokes,
+                strokes: result.visibleStrokes,
+              };
+              room.broadcast(segmentErasedMsg);
+            }
+          }
+        }
+        break;
+      }
+
       case 'leave': {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);

@@ -1,4 +1,5 @@
 import type { Point, Stroke, ToolType } from '../shared/protocol';
+import { eraseStrokeSegmentAt } from './geometry';
 
 /**
  * Off-white "paper" tone for DrawTogether visual theme.
@@ -7,13 +8,14 @@ export const CANVAS_BG_COLOR = '#faf9f5';
 
 export interface CanvasEngineOptions {
   canvas: HTMLCanvasElement;
-  tool?: 'brush' | 'eraser';
+  tool?: 'brush' | 'eraser' | 'segment-eraser';
   color?: string;
   width?: number;
   userId?: string;
   onStrokeStart?: (stroke: Stroke) => void;
   onStrokePoint?: (strokeId: string, point: Point) => void;
   onStrokeEnd?: (strokeId: string) => void;
+  onEraseSegment?: (targetStrokeId: string, newStrokes: Stroke[]) => void;
 }
 
 /**
@@ -32,7 +34,7 @@ export class CanvasEngine {
   private ctx: CanvasRenderingContext2D;
 
   // Drawing settings
-  private currentTool: 'brush' | 'eraser' = 'brush';
+  private currentTool: 'brush' | 'eraser' | 'segment-eraser' = 'brush';
   private currentColor = '#2563eb';
   private currentWidth = 4;
   private userId: string;
@@ -48,10 +50,11 @@ export class CanvasEngine {
   // In-progress remote strokes (keyed by strokeId)
   private remoteStrokes: Map<string, { stroke: Stroke; prevPoint: Point; prevMidPoint: Point | null }> = new Map();
 
-  // External hooks (for future websocket/ui wiring)
+  // External hooks (for websocket/ui wiring)
   public onStrokeStart?: (stroke: Stroke) => void;
   public onStrokePoint?: (strokeId: string, point: Point) => void;
   public onStrokeEnd?: (strokeId: string) => void;
+  public onEraseSegment?: (targetStrokeId: string, newStrokes: Stroke[]) => void;
 
   constructor(options: CanvasEngineOptions) {
     this.canvas = options.canvas;
@@ -69,6 +72,7 @@ export class CanvasEngine {
     this.onStrokeStart = options.onStrokeStart;
     this.onStrokePoint = options.onStrokePoint;
     this.onStrokeEnd = options.onStrokeEnd;
+    this.onEraseSegment = options.onEraseSegment;
 
     this.init();
   }
@@ -97,11 +101,11 @@ export class CanvasEngine {
   // Configuration API
   // ==========================================================================
 
-  public setTool(tool: 'brush' | 'eraser'): void {
+  public setTool(tool: 'brush' | 'eraser' | 'segment-eraser'): void {
     this.currentTool = tool;
   }
 
-  public getTool(): 'brush' | 'eraser' {
+  public getTool(): 'brush' | 'eraser' | 'segment-eraser' {
     return this.currentTool;
   }
 
@@ -214,6 +218,18 @@ export class CanvasEngine {
     this.clearCanvas();
     for (const stroke of this.strokes) {
       this.renderStroke(stroke);
+    }
+  }
+
+  /**
+   * Replaces an existing stroke with replacement strokes (e.g. from a segment erase),
+   * redrawing the visible canvas.
+   */
+  public replaceStroke(targetStrokeId: string, newStrokes: Stroke[]): void {
+    const idx = this.strokes.findIndex((s) => s.id === targetStrokeId);
+    if (idx !== -1) {
+      this.strokes.splice(idx, 1, ...newStrokes);
+      this.redraw(this.strokes);
     }
   }
 
@@ -381,6 +397,18 @@ export class CanvasEngine {
   private handlePointerDown(e: PointerEvent): void {
     // Only handle primary button / primary touch
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    if (this.currentTool === 'segment-eraser') {
+      const clickPoint = this.getCoordinates(e);
+      const result = eraseStrokeSegmentAt(clickPoint, this.strokes);
+      if (result) {
+        this.replaceStroke(result.targetStroke.id, result.replacementStrokes);
+        if (this.onEraseSegment) {
+          this.onEraseSegment(result.targetStroke.id, result.replacementStrokes);
+        }
+      }
+      return;
+    }
 
     this.isPointerDown = true;
     this.activePointerId = e.pointerId;

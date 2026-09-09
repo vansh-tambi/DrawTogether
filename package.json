@@ -15,7 +15,10 @@
   "devDependencies": {
     "@types/node": "^22.5.4",
     "@types/ws": "^8.5.12",
+    "autoprefixer": "^10.5.5",
     "concurrently": "^9.0.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.5.4",
     "vite": "^5.4.3"
   }

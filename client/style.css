@@ -87,6 +87,10 @@ canvas#canvas.canvas-fade-blend {
   opacity: 0.92;
 }
 
+canvas#canvas.is-segment-eraser {
+  cursor: crosshair;
+}
+
 /* ==========================================================================
    Header & Wordmark (Top-Left)
    ========================================================================== */

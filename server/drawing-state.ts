@@ -17,6 +17,10 @@ import type { Stroke, CanvasSnapshot } from '../shared/protocol';
  * documented conflict-resolution strategy for the room, ensuring deterministic,
  * synchronized canvas state across all connected peers without requiring complex CRDTs.
  */
+export type DrawingAction =
+  | { type: 'add'; stroke: Stroke }
+  | { type: 'replace'; originalStroke: Stroke; newStrokes: Stroke[]; originalIndex: number };
+
 export class RoomDrawingState {
   readonly roomId: string;
 
@@ -26,9 +30,14 @@ export class RoomDrawingState {
   private strokes: Stroke[] = [];
 
   /**
-   * LIFO stack of undone strokes available for redo.
+   * Action history for undo operations.
    */
-  private redoStack: Stroke[] = [];
+  private undoStack: DrawingAction[] = [];
+
+  /**
+   * Action history for redo operations.
+   */
+  private redoStack: DrawingAction[] = [];
 
   constructor(roomId: string) {
     this.roomId = roomId;
@@ -40,33 +49,92 @@ export class RoomDrawingState {
    */
   recordStroke(stroke: Stroke): void {
     this.strokes.push(stroke);
+    this.undoStack.push({ type: 'add', stroke });
     if (this.redoStack.length > 0) {
       this.redoStack = [];
     }
   }
 
   /**
-   * Undoes the latest stroke in the room (global LIFO).
-   * Moves the stroke from the visible list to the redo-available stack.
+   * Replaces an existing stroke with trimmed/split sub-strokes (e.g. from segment erasing).
+   * Fully reversible via undo/redo.
    */
-  undo(): Stroke | undefined {
-    const stroke = this.strokes.pop();
-    if (stroke) {
-      this.redoStack.push(stroke);
+  replaceStroke(targetStrokeId: string, newStrokes: Stroke[]): { originalStroke: Stroke; visibleStrokes: Stroke[] } | undefined {
+    const idx = this.strokes.findIndex((s) => s.id === targetStrokeId);
+    if (idx === -1) return undefined;
+
+    const originalStroke = this.strokes[idx];
+    this.strokes.splice(idx, 1, ...newStrokes);
+    this.undoStack.push({
+      type: 'replace',
+      originalStroke,
+      newStrokes,
+      originalIndex: idx,
+    });
+
+    if (this.redoStack.length > 0) {
+      this.redoStack = [];
     }
-    return stroke;
+
+    return {
+      originalStroke,
+      visibleStrokes: this.getVisibleStrokes(),
+    };
   }
 
   /**
-   * Redoes the most recently undone stroke in the room (global LIFO).
-   * Restores the stroke from the redo stack back to the visible stroke list.
+   * Undoes the latest action in the room (global LIFO).
+   */
+  undo(): Stroke | undefined {
+    const action = this.undoStack.pop();
+    if (!action) return undefined;
+
+    if (action.type === 'add') {
+      let idx = -1;
+      for (let i = this.strokes.length - 1; i >= 0; i--) {
+        if (this.strokes[i].id === action.stroke.id) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx !== -1) {
+        this.strokes.splice(idx, 1);
+      }
+      this.redoStack.push(action);
+      return action.stroke;
+    } else {
+      // Revert replacement: remove newStrokes and reinsert originalStroke
+      const newIds = new Set(action.newStrokes.map((s) => s.id));
+      this.strokes = this.strokes.filter((s) => !newIds.has(s.id));
+      const insertIdx = Math.min(action.originalIndex, this.strokes.length);
+      this.strokes.splice(insertIdx, 0, action.originalStroke);
+      this.redoStack.push(action);
+      return action.originalStroke;
+    }
+  }
+
+  /**
+   * Redoes the most recently undone action in the room (global LIFO).
    */
   redo(): Stroke | undefined {
-    const stroke = this.redoStack.pop();
-    if (stroke) {
-      this.strokes.push(stroke);
+    const action = this.redoStack.pop();
+    if (!action) return undefined;
+
+    if (action.type === 'add') {
+      this.strokes.push(action.stroke);
+      this.undoStack.push(action);
+      return action.stroke;
+    } else {
+      // Re-apply replacement
+      const idx = this.strokes.findIndex((s) => s.id === action.originalStroke.id);
+      if (idx !== -1) {
+        this.strokes.splice(idx, 1, ...action.newStrokes);
+      } else {
+        this.strokes.push(...action.newStrokes);
+      }
+      this.undoStack.push(action);
+      return action.originalStroke;
     }
-    return stroke;
   }
 
   /**
@@ -90,6 +158,7 @@ export class RoomDrawingState {
    */
   clear(): void {
     this.strokes = [];
+    this.undoStack = [];
     this.redoStack = [];
   }
 }
@@ -117,6 +186,16 @@ export class DrawingStateManager {
 
   recordStroke(roomId: string, stroke: Stroke): void {
     this.getOrCreate(roomId).recordStroke(stroke);
+  }
+
+  replaceStroke(
+    roomId: string,
+    targetStrokeId: string,
+    newStrokes: Stroke[]
+  ): { originalStroke: Stroke; visibleStrokes: Stroke[] } | undefined {
+    const room = this.rooms.get(roomId);
+    if (!room) return undefined;
+    return room.replaceStroke(targetStrokeId, newStrokes);
   }
 
   undo(roomId: string): { stroke: Stroke; visibleStrokes: Stroke[] } | undefined {

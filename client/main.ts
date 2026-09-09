@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
   const toolEraserBtn = document.getElementById('tool-eraser') as HTMLButtonElement;
+  const toolSegmentEraserBtn = document.getElementById('tool-segment-eraser') as HTMLButtonElement;
   const widthSlider = document.getElementById('stroke-width-slider') as HTMLInputElement;
   const widthDotPreview = document.getElementById('width-dot-preview') as HTMLElement;
   const swatchPalette = document.getElementById('swatch-palette') as HTMLElement;
@@ -130,14 +131,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tool Selection
   toolBrushBtn.addEventListener('click', () => {
     canvasEngine.setTool('brush');
+    canvasEl.classList.remove('is-segment-eraser');
     toolBrushBtn.classList.add('is-active');
     toolEraserBtn.classList.remove('is-active');
+    toolSegmentEraserBtn.classList.remove('is-active');
   });
 
   toolEraserBtn.addEventListener('click', () => {
     canvasEngine.setTool('eraser');
+    canvasEl.classList.remove('is-segment-eraser');
     toolEraserBtn.classList.add('is-active');
     toolBrushBtn.classList.remove('is-active');
+    toolSegmentEraserBtn.classList.remove('is-active');
+  });
+
+  toolSegmentEraserBtn.addEventListener('click', () => {
+    canvasEngine.setTool('segment-eraser');
+    canvasEl.classList.add('is-segment-eraser');
+    toolSegmentEraserBtn.classList.add('is-active');
+    toolBrushBtn.classList.remove('is-active');
+    toolEraserBtn.classList.remove('is-active');
   });
 
   // Stroke Width
@@ -160,11 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
       canvasEngine.setColor(color);
       updateSizePreview(canvasEngine.getWidth(), color);
 
-      // Auto-activate brush tool if eraser was active
-      if (canvasEngine.getTool() === 'eraser') {
-        canvasEngine.setTool('brush');
-        toolBrushBtn.classList.add('is-active');
-        toolEraserBtn.classList.remove('is-active');
+      // Auto-activate brush tool if eraser or segment eraser was active
+      if (canvasEngine.getTool() !== 'brush') {
+        toolBrushBtn.click();
       }
     });
   });
@@ -209,6 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
       toolBrushBtn.click();
     } else if (e.key === 'e' || e.key === 'E') {
       toolEraserBtn.click();
+    } else if (e.key === 'x' || e.key === 'X') {
+      toolSegmentEraserBtn.click();
     } else if (e.key === 'u' || e.key === 'U') {
       btnUndo.click();
     } else if (e.key === 'r' || e.key === 'R') {
@@ -268,6 +281,14 @@ document.addEventListener('DOMContentLoaded', () => {
     wsClient.send({
       type: 'stroke-end',
       strokeId,
+    });
+  };
+
+  canvasEngine.onEraseSegment = (targetStrokeId, newStrokes) => {
+    wsClient.send({
+      type: 'erase-segment',
+      targetStrokeId,
+      newStrokes,
     });
   };
 
@@ -365,6 +386,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (message.strokes) {
             triggerCanvasRedrawBlend();
             canvasEngine.redraw(message.strokes);
+          }
+          break;
+
+        case 'segment-erased':
+          triggerCanvasRedrawBlend();
+          if (message.strokes) {
+            canvasEngine.redraw(message.strokes);
+          } else {
+            canvasEngine.replaceStroke(message.targetStrokeId, message.newStrokes);
           }
           break;
 

@@ -49,6 +49,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 
+  // DOM Elements - Draggable & Minimizable Floating Dock
+  const dockPanel = document.getElementById('dock-panel') as HTMLElement;
+  const dockHeader = document.getElementById('dock-header') as HTMLElement;
+  const btnDockMinimize = document.getElementById('btn-dock-minimize') as HTMLButtonElement;
+  const btnDockExpand = document.getElementById('btn-dock-expand') as HTMLButtonElement;
+  const btnDockReset = document.getElementById('btn-dock-reset') as HTMLButtonElement;
+  const dockMinimizedBar = document.getElementById('dock-minimized-bar') as HTMLElement;
+  const miniToolName = document.getElementById('mini-tool-name') as HTMLElement;
+  const miniColorDot = document.getElementById('mini-color-dot') as HTMLElement;
+  const miniSizeText = document.getElementById('mini-size-text') as HTMLElement;
+
   // DOM Elements - Modals & Overlays
   const modalClear = document.getElementById('modal-clear') as HTMLElement;
   const btnModalCancel = document.getElementById('btn-modal-cancel') as HTMLButtonElement;
@@ -132,9 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     savedTheme = window.localStorage.getItem('drawtogether-theme');
   } catch {
-    // Use the light theme when local storage is unavailable.
+    // Local storage unavailable
   }
-  applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+  // Default to dark mode for new visitors if not explicitly set to 'light'
+  applyTheme(savedTheme === 'light' ? 'light' : 'dark');
   btnSettings.addEventListener('click', () => {
     const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
     applyTheme(nextTheme, true);
@@ -245,6 +257,17 @@ document.addEventListener('DOMContentLoaded', () => {
         toolPanBtn.classList.add('is-active');
         break;
     }
+
+    const toolDisplayNames: Record<string, string> = {
+      'brush': 'Pen',
+      'highlighter': 'Highlighter',
+      'eraser': 'Eraser',
+      'segment-eraser': 'Segment',
+      'pan': 'Pan'
+    };
+    if (miniToolName) {
+      miniToolName.textContent = toolDisplayNames[tool] || tool;
+    }
   }
 
   toolBrushBtn.addEventListener('click', () => setActiveTool('brush'));
@@ -273,6 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update the below-slider dynamic readout
     if (sizeReadout) {
       sizeReadout.textContent = `Brush Size: ${size}pt`;
+    }
+    if (miniSizeText) {
+      miniSizeText.textContent = `${size}pt`;
+    }
+    if (color && miniColorDot) {
+      miniColorDot.style.backgroundColor = color;
     }
 
     // Update preset dots active state
@@ -421,6 +450,192 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ==========================================================================
+  // Draggable & Minimizable Floating Dock
+  // ==========================================================================
+
+  let isDockMinimized = false;
+  let isDockMoved = false;
+
+  function setDockMinimized(minimized: boolean): void {
+    isDockMinimized = minimized;
+    dockPanel.classList.toggle('is-minimized', minimized);
+    btnDockMinimize.setAttribute('aria-expanded', String(!minimized));
+    if (minimized) {
+      showToast('Toolbar minimized · click pill to expand');
+    }
+  }
+
+  btnDockMinimize?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setDockMinimized(true);
+  });
+
+  btnDockExpand?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setDockMinimized(false);
+  });
+
+  dockMinimizedBar?.addEventListener('click', (e) => {
+    // If click was not a drag, expand toolbar
+    if (!hasDragged) {
+      setDockMinimized(false);
+    }
+  });
+
+  // Reset dock position to default bottom-center
+  function resetDockPosition(): void {
+    dockPanel.style.left = '';
+    dockPanel.style.top = '';
+    dockPanel.style.bottom = '';
+    dockPanel.style.transform = '';
+    dockPanel.classList.add('bottom-5', 'left-1/2', '-translate-x-1/2');
+    isDockMoved = false;
+    btnDockReset?.classList.add('hidden');
+    try {
+      localStorage.removeItem('drawtogether-dock-pos');
+    } catch {
+      // ignore
+    }
+    showToast('Toolbar position reset to bottom');
+  }
+
+  btnDockReset?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetDockPosition();
+  });
+
+  // Pointer drag logic with Pointer Capture
+  let isDragging = false;
+  let hasDragged = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let initialLeft = 0;
+  let initialTop = 0;
+
+  function onDragStart(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input')) return;
+
+    isDragging = true;
+    hasDragged = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    const rect = dockPanel.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+
+    try {
+      dockPanel.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    dockPanel.classList.add('is-dragging');
+  }
+
+  function onDragMove(e: PointerEvent): void {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasDragged = true;
+    }
+
+    if (!hasDragged) return;
+
+    if (!isDockMoved) {
+      dockPanel.classList.remove('bottom-5', 'left-1/2', '-translate-x-1/2');
+      dockPanel.style.bottom = 'auto';
+      dockPanel.style.transform = 'none';
+      isDockMoved = true;
+      btnDockReset?.classList.remove('hidden');
+    }
+
+    let newLeft = initialLeft + dx;
+    let newTop = initialTop + dy;
+
+    // Viewport bounds clamping (10px margin)
+    const dockWidth = dockPanel.offsetWidth;
+    const dockHeight = dockPanel.offsetHeight;
+    const margin = 10;
+    const maxLeft = Math.max(margin, window.innerWidth - dockWidth - margin);
+    const maxTop = Math.max(margin, window.innerHeight - dockHeight - margin);
+
+    newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
+    newTop = Math.max(margin, Math.min(newTop, maxTop));
+
+    dockPanel.style.left = `${newLeft}px`;
+    dockPanel.style.top = `${newTop}px`;
+  }
+
+  function onDragEnd(e: PointerEvent): void {
+    if (!isDragging) return;
+    isDragging = false;
+    try {
+      if (dockPanel.hasPointerCapture(e.pointerId)) {
+        dockPanel.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // ignore
+    }
+    dockPanel.classList.remove('is-dragging');
+
+    if (hasDragged) {
+      try {
+        localStorage.setItem(
+          'drawtogether-dock-pos',
+          JSON.stringify({ left: dockPanel.style.left, top: dockPanel.style.top })
+        );
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  dockHeader?.addEventListener('pointerdown', onDragStart);
+  dockMinimizedBar?.addEventListener('pointerdown', onDragStart);
+  dockPanel?.addEventListener('pointermove', onDragMove);
+  dockPanel?.addEventListener('pointerup', onDragEnd);
+  dockPanel?.addEventListener('pointercancel', onDragEnd);
+
+  // Restore saved dock position if available
+  try {
+    const savedPosStr = localStorage.getItem('drawtogether-dock-pos');
+    if (savedPosStr) {
+      const savedPos = JSON.parse(savedPosStr);
+      if (savedPos && savedPos.left && savedPos.top) {
+        dockPanel.classList.remove('bottom-5', 'left-1/2', '-translate-x-1/2');
+        dockPanel.style.bottom = 'auto';
+        dockPanel.style.transform = 'none';
+        dockPanel.style.left = savedPos.left;
+        dockPanel.style.top = savedPos.top;
+        isDockMoved = true;
+        btnDockReset?.classList.remove('hidden');
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // Ensure dock stays in viewport on resize
+  window.addEventListener('resize', () => {
+    if (isDockMoved && dockPanel.style.left && dockPanel.style.top) {
+      const currentLeft = parseFloat(dockPanel.style.left) || 0;
+      const currentTop = parseFloat(dockPanel.style.top) || 0;
+      const dockWidth = dockPanel.offsetWidth;
+      const dockHeight = dockPanel.offsetHeight;
+      const margin = 10;
+      const maxLeft = Math.max(margin, window.innerWidth - dockWidth - margin);
+      const maxTop = Math.max(margin, window.innerHeight - dockHeight - margin);
+      dockPanel.style.left = `${Math.max(margin, Math.min(currentLeft, maxLeft))}px`;
+      dockPanel.style.top = `${Math.max(margin, Math.min(currentTop, maxTop))}px`;
+    }
+  });
+
+  // ==========================================================================
   // History Actions (Undo, Redo, Clear Board)
   // ==========================================================================
 
@@ -550,6 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const next = Math.max(1, canvasEngine.getWidth() - 2);
       canvasEngine.setWidth(next);
       updateSizeUI(next, canvasEngine.getColor());
+    } else if (e.key === 'm' || e.key === 'M') {
+      setDockMinimized(!isDockMinimized);
     }
   });
 

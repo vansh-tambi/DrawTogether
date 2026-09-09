@@ -63,6 +63,138 @@ canvas#canvas.is-pan-tool:active {
 }
 
 /* ==========================================================================
+   Draggable & Minimizable Floating Dock
+   ========================================================================== */
+
+#dock-panel {
+  touch-action: none;
+  user-select: none;
+}
+
+#dock-header {
+  user-select: none;
+  touch-action: none;
+}
+
+#dock-drag-handle {
+  cursor: grab;
+}
+
+.dock-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.dock-header-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #111827;
+}
+
+body.dark-mode .dock-header-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+}
+
+/* Dragging active state */
+#dock-panel.is-dragging {
+  cursor: grabbing !important;
+  user-select: none !important;
+  transition: box-shadow 150ms ease !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(91, 79, 233, 0.5) !important;
+}
+
+#dock-panel.is-dragging #dock-header,
+#dock-panel.is-dragging #dock-drag-handle,
+#dock-panel.is-dragging #dock-minimized-bar {
+  cursor: grabbing !important;
+}
+
+/* Minimized Dock State */
+#dock-panel.is-minimized {
+  padding: 5px 8px !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+#dock-panel.is-minimized #dock-header {
+  display: none !important;
+}
+
+#dock-panel.is-minimized #dock-body {
+  display: none !important;
+}
+
+#dock-panel.is-minimized #dock-minimized-bar {
+  display: flex !important;
+}
+
+/* ── Eliminate any scrollbar on the floating toolbar / dock ── */
+#dock-panel,
+#dock-body,
+#dock-header,
+#dock-minimized-bar,
+#dock-panel * {
+  overflow: visible;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+#dock-panel::-webkit-scrollbar,
+#dock-body::-webkit-scrollbar,
+#dock-header::-webkit-scrollbar,
+#dock-minimized-bar::-webkit-scrollbar,
+#dock-panel *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ── Theme-matching sleek scrollbar styling globally ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 79, 233, 0.25) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(91, 79, 233, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 79, 233, 0.45);
+}
+
+body.dark-mode * {
+  scrollbar-color: rgba(196, 181, 253, 0.25) transparent;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: rgba(196, 181, 253, 0.25);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 181, 253, 0.45);
+}
+
+/* ==========================================================================
    Dock Section Labels
    ========================================================================== */
 
@@ -292,24 +424,25 @@ canvas#canvas.is-pan-tool:active {
 .swatch-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
+  gap: 8px;
+  padding: 3px;
 }
 
 /* Curated Swatch Buttons */
 .swatch-btn {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 9999px;
-  border: 2px solid rgba(255, 255, 255, 0.70);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
   background-color: var(--swatch-color);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
   cursor: pointer;
-  transition: transform 150ms cubic-bezier(0.2, 0, 0.2, 1), box-shadow 150ms ease-out;
+  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 140ms ease-out;
 }
 
 .swatch-btn:hover {
-  transform: scale(1.2);
+  transform: scale(1.08);
   z-index: 10;
 }
 
@@ -317,11 +450,11 @@ canvas#canvas.is-pan-tool:active {
   transform: scale(0.95);
 }
 
-/* Prominent double-ring offset for active swatch */
+/* Crisp double-ring offset for active swatch that fits cleanly without overlapping neighbours */
 .swatch-btn.is-active {
-  transform: scale(1.25);
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--swatch-color), 0 2px 12px rgba(0, 0, 0, 0.18);
-  z-index: 10;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px var(--swatch-color), 0 2px 8px rgba(0, 0, 0, 0.18);
+  z-index: 5;
 }
 
 /* ==========================================================================
@@ -563,6 +696,14 @@ body.dark-mode .size-dot-btn.is-active {
   color: #F8F7FF;
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.16);
+}
+
+body.dark-mode .swatch-btn.is-active {
+  box-shadow: 0 0 0 2px #1F1B2E, 0 0 0 3.5px var(--swatch-color), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .swatch-btn {
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 body.dark-mode .custom-color-popover,

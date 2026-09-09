@@ -121,16 +121,32 @@ export class CursorOverlayManager {
     }, 250);
 
     // Angled SVG arrow tinted to the remote user's assigned color
-    // with a colored rounded-rectangle name badge at the tail
+    // with a colored rounded-rectangle name badge at the tail.
+    // Build these nodes explicitly so an untrusted userId can never become HTML.
     const shortName = this.formatDisplayName(userId);
-    wrapper.innerHTML = `
-      <svg class="drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 2L20 12L12 14.5L9 22L4 2Z" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>
-      <div class="cursor-label px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white tracking-tight" style="background-color: ${color};">
-        ${shortName}
-      </div>
-    `;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform');
+    svg.setAttribute('width', '24');
+    svg.setAttribute('height', '24');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M4 2L20 12L12 14.5L9 22L4 2Z');
+    path.setAttribute('fill', color);
+    path.setAttribute('stroke', '#ffffff');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+
+    const label = document.createElement('div');
+    label.className = 'cursor-label px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white tracking-tight';
+    label.style.backgroundColor = color;
+    label.textContent = shortName;
+
+    wrapper.append(svg, label);
 
     return wrapper;
   }

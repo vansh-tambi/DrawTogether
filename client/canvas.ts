@@ -190,7 +190,8 @@ export class CanvasEngine {
       this.ctx.globalAlpha = 0.35;
       this.ctx.strokeStyle = color;
       this.ctx.fillStyle = color;
-      this.ctx.lineWidth = width * 2.2;
+      // Stroke.width already contains the highlighter's effective width.
+      this.ctx.lineWidth = width;
     } else {
       this.ctx.strokeStyle = color;
       this.ctx.fillStyle = color;
@@ -200,7 +201,7 @@ export class CanvasEngine {
     // Single point: render a circular dot
     if (points.length === 1) {
       this.ctx.beginPath();
-      this.ctx.arc(points[0].x, points[0].y, (tool === 'highlighter' ? width * 2.2 : width) / 2, 0, Math.PI * 2);
+      this.ctx.arc(points[0].x, points[0].y, width / 2, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.restore();
       return;
@@ -298,7 +299,14 @@ export class CanvasEngine {
 
     // Draw initial dot for remote user immediately
     this.ctx.save();
-    this.ctx.fillStyle = tool === 'eraser' ? CANVAS_BG_COLOR : color;
+    if (tool === 'eraser') {
+      this.ctx.fillStyle = CANVAS_BG_COLOR;
+    } else {
+      this.ctx.fillStyle = color;
+      if (tool === 'highlighter') {
+        this.ctx.globalAlpha = 0.35;
+      }
+    }
     this.ctx.beginPath();
     this.ctx.arc(x, y, width / 2, 0, Math.PI * 2);
     this.ctx.fill();
@@ -317,7 +325,14 @@ export class CanvasEngine {
     this.ctx.save();
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
-    this.ctx.strokeStyle = active.stroke.tool === 'eraser' ? CANVAS_BG_COLOR : active.stroke.color;
+    if (active.stroke.tool === 'eraser') {
+      this.ctx.strokeStyle = CANVAS_BG_COLOR;
+    } else {
+      this.ctx.strokeStyle = active.stroke.color;
+      if (active.stroke.tool === 'highlighter') {
+        this.ctx.globalAlpha = 0.35;
+      }
+    }
     this.ctx.lineWidth = active.stroke.width;
 
     const points = active.stroke.points;
@@ -363,7 +378,14 @@ export class CanvasEngine {
       this.ctx.save();
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
-      this.ctx.strokeStyle = active.stroke.tool === 'eraser' ? CANVAS_BG_COLOR : active.stroke.color;
+      if (active.stroke.tool === 'eraser') {
+        this.ctx.strokeStyle = CANVAS_BG_COLOR;
+      } else {
+        this.ctx.strokeStyle = active.stroke.color;
+        if (active.stroke.tool === 'highlighter') {
+          this.ctx.globalAlpha = 0.35;
+        }
+      }
       this.ctx.lineWidth = active.stroke.width;
 
       this.ctx.beginPath();

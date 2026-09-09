@@ -39,7 +39,9 @@ export class PresenceUI {
   }
 
   public removeUser(userId: string): void {
-    const el = this.container.querySelector(`[data-user-id="${userId}"]`) as HTMLElement;
+    const el = Array.from(this.container.querySelectorAll<HTMLElement>('[data-user-id]')).find(
+      (candidate) => candidate.dataset.userId === userId
+    );
     if (el) {
       el.classList.add('scale-75', 'opacity-0', 'transition-all', 'duration-200');
       setTimeout(() => {
@@ -95,45 +97,49 @@ export class PresenceUI {
     const visibleUsers = allUsers.slice(0, maxVisible);
     const overflowCount = allUsers.length - maxVisible;
 
-    let html = `<div class="flex flex-col items-end space-y-1">`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex flex-col items-end space-y-1';
 
     for (const user of visibleUsers) {
       const isLocal = user.userId === this.localUserId;
       const initials = this.getInitials(user.userId);
       const displayName = this.formatShortId(user.userId);
 
-      html += `
-        <div
-          class="presence-user-item"
-          data-user-id="${user.userId}"
-          title="${user.userId}"
-        >
-          <div
-            class="presence-avatar"
-            style="background-color: ${user.color};"
-          >
-            ${initials}
-          </div>
-          <span class="presence-username">${displayName}</span>
-          ${isLocal ? `<span class="presence-you-tag">(You)</span>` : ''}
-        </div>
-      `;
+      const item = document.createElement('div');
+      item.className = 'presence-user-item';
+      item.dataset.userId = user.userId;
+      item.title = user.userId;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'presence-avatar';
+      avatar.style.backgroundColor = user.color;
+      avatar.textContent = initials;
+
+      const username = document.createElement('span');
+      username.className = 'presence-username';
+      username.textContent = displayName;
+
+      item.append(avatar, username);
+
+      if (isLocal) {
+        const youTag = document.createElement('span');
+        youTag.className = 'presence-you-tag';
+        youTag.textContent = '(You)';
+        item.appendChild(youTag);
+      }
+
+      wrapper.appendChild(item);
     }
 
     if (overflowCount > 0) {
       const remainingUsers = allUsers.slice(maxVisible).map((u) => u.userId).join(', ');
-      html += `
-        <div
-          class="presence-overflow-pill"
-          title="Other collaborators: ${remainingUsers}"
-        >
-          +${overflowCount} More
-        </div>
-      `;
+      const overflow = document.createElement('div');
+      overflow.className = 'presence-overflow-pill';
+      overflow.title = `Other collaborators: ${remainingUsers}`;
+      overflow.textContent = `+${overflowCount} More`;
+      wrapper.appendChild(overflow);
     }
 
-    html += `</div>`;
-
-    this.container.innerHTML = html;
+    this.container.replaceChildren(wrapper);
   }
 }

@@ -1,39 +1,399 @@
-export interface CanvasManager {
+import type { Point, Stroke, ToolType } from '../shared/protocol';
+
+/**
+ * Off-white "paper" tone for DrawTogether visual theme.
+ */
+export const CANVAS_BG_COLOR = '#faf9f5';
+
+export interface CanvasEngineOptions {
   canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  resize: () => void;
+  tool?: 'brush' | 'eraser';
+  color?: string;
+  width?: number;
+  userId?: string;
+  onStrokeStart?: (stroke: Stroke) => void;
+  onStrokePoint?: (strokeId: string, point: Point) => void;
+  onStrokeEnd?: (strokeId: string) => void;
 }
 
-export function initCanvas(canvasId: string): CanvasManager {
+/**
+ * CanvasEngine
+ *
+ * Local drawing engine with:
+ * - Quadratic bezier midpoint interpolation for fluid, smooth curves
+ * - Unified pointer events (mouse, touch, stylus)
+ * - Single canvas with incremental segment drawing (zero full-canvas redraws during drawing)
+ * - Off-white paper background rendering
+ * - Full redraw/replay API for undo/redo and synchronization
+ * - Zero networking dependencies
+ */
+export class CanvasEngine {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+
+  // Drawing settings
+  private currentTool: 'brush' | 'eraser' = 'brush';
+  private currentColor = '#2563eb';
+  private currentWidth = 4;
+  private userId: string;
+
+  // Stroke state
+  private strokes: Stroke[] = [];
+  private activeStroke: Stroke | null = null;
+  private prevPoint: Point | null = null;
+  private prevMidPoint: Point | null = null;
+  private isPointerDown = false;
+  private activePointerId: number | null = null;
+
+  // External hooks (for future websocket/ui wiring)
+  public onStrokeStart?: (stroke: Stroke) => void;
+  public onStrokePoint?: (strokeId: string, point: Point) => void;
+  public onStrokeEnd?: (strokeId: string) => void;
+
+  constructor(options: CanvasEngineOptions) {
+    this.canvas = options.canvas;
+    const context = this.canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Failed to get 2D rendering context from canvas.');
+    }
+    this.ctx = context;
+
+    this.currentTool = options.tool ?? 'brush';
+    this.currentColor = options.color ?? '#2563eb';
+    this.currentWidth = options.width ?? 4;
+    this.userId = options.userId ?? `user_${Math.random().toString(36).substring(2, 8)}`;
+
+    this.onStrokeStart = options.onStrokeStart;
+    this.onStrokePoint = options.onStrokePoint;
+    this.onStrokeEnd = options.onStrokeEnd;
+
+    this.init();
+  }
+
+  private init(): void {
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.setupPointerListeners();
+  }
+
+  public resize(): void {
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const height = typeof window !== 'undefined' ? window.innerHeight : 800;
+
+    this.canvas.width = Math.floor(width * dpr);
+    this.canvas.height = Math.floor(height * dpr);
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.redraw(this.strokes);
+  }
+
+  // ==========================================================================
+  // Configuration API
+  // ==========================================================================
+
+  public setTool(tool: 'brush' | 'eraser'): void {
+    this.currentTool = tool;
+  }
+
+  public getTool(): 'brush' | 'eraser' {
+    return this.currentTool;
+  }
+
+  public setColor(color: string): void {
+    this.currentColor = color;
+  }
+
+  public getColor(): string {
+    return this.currentColor;
+  }
+
+  public setWidth(width: number): void {
+    if (width > 0) {
+      this.currentWidth = width;
+    }
+  }
+
+  public getWidth(): number {
+    return this.currentWidth;
+  }
+
+  public setUserId(userId: string): void {
+    this.userId = userId;
+  }
+
+  public getStrokes(): Stroke[] {
+    return [...this.strokes];
+  }
+
+  // ==========================================================================
+  // Canvas Rendering & Replay API
+  // ==========================================================================
+
+  /**
+   * Clears the canvas to the paper background tone.
+   */
+  public clearCanvas(): void {
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
+
+    this.ctx.save();
+    this.ctx.fillStyle = CANVAS_BG_COLOR;
+    this.ctx.fillRect(0, 0, width, height);
+    this.ctx.restore();
+  }
+
+  /**
+   * Renders a single stroke onto the canvas using quadratic curve smoothing.
+   */
+  public renderStroke(stroke: Stroke): void {
+    const { points, tool, color, width } = stroke;
+    if (!points || points.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    if (tool === 'eraser') {
+      this.ctx.strokeStyle = CANVAS_BG_COLOR;
+      this.ctx.fillStyle = CANVAS_BG_COLOR;
+    } else {
+      this.ctx.strokeStyle = color;
+      this.ctx.fillStyle = color;
+    }
+    this.ctx.lineWidth = width;
+
+    // Single point: render a circular dot
+    if (points.length === 1) {
+      this.ctx.beginPath();
+      this.ctx.arc(points[0].x, points[0].y, width / 2, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+      return;
+    }
+
+    // Two points: simple straight line
+    if (points.length === 2) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(points[0].x, points[0].y);
+      this.ctx.lineTo(points[1].x, points[1].y);
+      this.ctx.stroke();
+      this.ctx.restore();
+      return;
+    }
+
+    // 3 or more points: quadratic bezier curve interpolation between midpoints
+    this.ctx.beginPath();
+    this.ctx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 1; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      this.ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
+    }
+
+    const lastPoint = points[points.length - 1];
+    this.ctx.lineTo(lastPoint.x, lastPoint.y);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  /**
+   * Clears the canvas and replays the given stroke list.
+   */
+  public redraw(strokes: Stroke[]): void {
+    this.strokes = [...strokes];
+    this.clearCanvas();
+    for (const stroke of this.strokes) {
+      this.renderStroke(stroke);
+    }
+  }
+
+  /**
+   * Appends an externally created stroke to the local state and draws it directly.
+   */
+  public addStroke(stroke: Stroke): void {
+    this.strokes.push(stroke);
+    this.renderStroke(stroke);
+  }
+
+  // ==========================================================================
+  // Pointer Events & Incremental Drawing
+  // ==========================================================================
+
+  private getCoordinates(e: PointerEvent): Point {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  }
+
+  private setupPointerListeners(): void {
+    this.canvas.addEventListener('pointerdown', (e: PointerEvent) => this.handlePointerDown(e));
+    this.canvas.addEventListener('pointermove', (e: PointerEvent) => this.handlePointerMove(e));
+    this.canvas.addEventListener('pointerup', (e: PointerEvent) => this.handlePointerUp(e));
+    this.canvas.addEventListener('pointercancel', (e: PointerEvent) => this.handlePointerUp(e));
+  }
+
+  private handlePointerDown(e: PointerEvent): void {
+    // Only handle primary button / primary touch
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    this.isPointerDown = true;
+    this.activePointerId = e.pointerId;
+
+    try {
+      this.canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore in environments without pointer capture
+    }
+
+    const startPoint = this.getCoordinates(e);
+    const strokeId = `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    this.activeStroke = {
+      id: strokeId,
+      userId: this.userId,
+      tool: this.currentTool,
+      color: this.currentColor,
+      width: this.currentTool === 'eraser' ? this.currentWidth * 2.5 : this.currentWidth,
+      points: [startPoint],
+    };
+
+    this.prevPoint = startPoint;
+    this.prevMidPoint = null;
+
+    // Draw initial dot immediately
+    this.ctx.save();
+    this.ctx.fillStyle = this.currentTool === 'eraser' ? CANVAS_BG_COLOR : this.currentColor;
+    this.ctx.beginPath();
+    this.ctx.arc(startPoint.x, startPoint.y, this.activeStroke.width / 2, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+
+    if (this.onStrokeStart) {
+      this.onStrokeStart(this.activeStroke);
+    }
+  }
+
+  private handlePointerMove(e: PointerEvent): void {
+    if (!this.isPointerDown || !this.activeStroke || this.activePointerId !== e.pointerId) {
+      return;
+    }
+
+    const currentPoint = this.getCoordinates(e);
+    const lastPoint = this.prevPoint;
+    if (!lastPoint) return;
+
+    // Discard jitter under 1px
+    const dx = currentPoint.x - lastPoint.x;
+    const dy = currentPoint.y - lastPoint.y;
+    if (dx * dx + dy * dy < 1) {
+      return;
+    }
+
+    this.activeStroke.points.push(currentPoint);
+
+    this.ctx.save();
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.strokeStyle = this.activeStroke.tool === 'eraser' ? CANVAS_BG_COLOR : this.activeStroke.color;
+    this.ctx.lineWidth = this.activeStroke.width;
+
+    const points = this.activeStroke.points;
+
+    if (points.length === 2) {
+      // First segment: midpoint between start and current point
+      const mid = {
+        x: (lastPoint.x + currentPoint.x) / 2,
+        y: (lastPoint.y + currentPoint.y) / 2,
+      };
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(lastPoint.x, lastPoint.y);
+      this.ctx.lineTo(mid.x, mid.y);
+      this.ctx.stroke();
+
+      this.prevMidPoint = mid;
+    } else if (this.prevMidPoint) {
+      // Subsequent segments: curve from previous midpoint to new midpoint
+      const newMid = {
+        x: (lastPoint.x + currentPoint.x) / 2,
+        y: (lastPoint.y + currentPoint.y) / 2,
+      };
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.prevMidPoint.x, this.prevMidPoint.y);
+      this.ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, newMid.x, newMid.y);
+      this.ctx.stroke();
+
+      this.prevMidPoint = newMid;
+    }
+
+    this.ctx.restore();
+    this.prevPoint = currentPoint;
+
+    if (this.onStrokePoint) {
+      this.onStrokePoint(this.activeStroke.id, currentPoint);
+    }
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    if (!this.isPointerDown || !this.activeStroke || this.activePointerId !== e.pointerId) {
+      return;
+    }
+
+    this.isPointerDown = false;
+    this.activePointerId = null;
+
+    try {
+      if (this.canvas.hasPointerCapture(e.pointerId)) {
+        this.canvas.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // ignore
+    }
+
+    const lastPoint = this.prevPoint;
+    if (this.prevMidPoint && lastPoint) {
+      // Connect to final point
+      this.ctx.save();
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = this.activeStroke.tool === 'eraser' ? CANVAS_BG_COLOR : this.activeStroke.color;
+      this.ctx.lineWidth = this.activeStroke.width;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.prevMidPoint.x, this.prevMidPoint.y);
+      this.ctx.lineTo(lastPoint.x, lastPoint.y);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    const completedStroke = this.activeStroke;
+    this.strokes.push(completedStroke);
+
+    this.activeStroke = null;
+    this.prevPoint = null;
+    this.prevMidPoint = null;
+
+    if (this.onStrokeEnd) {
+      this.onStrokeEnd(completedStroke.id);
+    }
+  }
+}
+
+// Backward-compatibility initialization helper
+export function initCanvas(canvasId: string): CanvasEngine {
   const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
   if (!canvas) {
     throw new Error(`Canvas element with id "${canvasId}" not found.`);
   }
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Failed to get 2D rendering context.');
-  }
-
-  function resize(): void {
-    const dpr = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    ctx?.scale(dpr, dpr);
-  }
-
-  resize();
-  window.addEventListener('resize', resize);
-
-  return {
-    canvas,
-    ctx,
-    resize,
-  };
+  return new CanvasEngine({ canvas });
 }

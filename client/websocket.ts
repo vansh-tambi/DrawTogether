@@ -2,124 +2,324 @@ import {
   safeParseServerMessageJson,
   type ClientMessage,
   type ServerMessage,
-  type UserPresence,
+  type CursorMoveClientMessage,
+  type StrokePointClientMessage,
 } from '../shared/protocol';
 
-export interface WebSocketClientOptions {
-  serverUrl?: string;
-  roomId?: string;
-  userId?: string;
-  onWelcome?: (message: Extract<ServerMessage, { type: 'welcome' }>) => void;
-  onUserJoined?: (message: Extract<ServerMessage, { type: 'user-joined' }>) => void;
-  onUserLeft?: (message: Extract<ServerMessage, { type: 'user-left' }>) => void;
-  onPresenceUpdate?: (message: Extract<ServerMessage, { type: 'presence-update' }>) => void;
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+export type MessageHandler = (message: ServerMessage) => void;
+export type StateChangeHandler = (state: ConnectionState) => void;
+
+export interface WebSocketClientConfig {
+  url?: string;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  backoffFactor?: number;
+  throttleIntervalMs?: number;
 }
 
-export interface WebSocketClientHandle {
-  ws: WebSocket;
-  sendMessage: (msg: ClientMessage) => void;
-  getUserId: () => string;
-  getRoomId: () => string;
-  getAssignedColor: () => string | null;
-  getPresence: () => UserPresence[];
-}
+/**
+ * WebSocketClient
+ *
+ * Transport-only WebSocket wrapper providing:
+ * - Auto-reconnect with exponential backoff and jitter on unexpected disconnects
+ * - Strongly-typed message sending and serialization
+ * - Event-based subscription with runtime validation against ServerMessage schemas
+ * - ~30Hz throttling for cursor-move (latest position) and stroke-point (batched without dropping)
+ */
+export class WebSocketClient {
+  private url: string;
+  private ws: WebSocket | null = null;
+  private state: ConnectionState = 'disconnected';
 
-export function initWebSocket(options: WebSocketClientOptions = {}): WebSocketClientHandle {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.hostname || 'localhost';
-  const defaultPort = '3000';
-  const port = window.location.port === '5173' || window.location.port === '' ? defaultPort : window.location.port;
+  // Reconnection options
+  private readonly baseDelayMs: number;
+  private readonly maxDelayMs: number;
+  private readonly backoffFactor: number;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private isDeliberateLeave = false;
 
-  const url = options.serverUrl || `${protocol}//${host}:${port}`;
-  const roomId = options.roomId || 'default-room';
-  const userId = options.userId || `user_${Math.random().toString(36).substring(2, 8)}`;
+  // Throttling options & buffers (~30Hz = 33ms)
+  private readonly throttleIntervalMs: number;
+  private throttleTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingCursorMove: CursorMoveClientMessage | null = null;
+  private pendingStrokePoints: StrokePointClientMessage[] = [];
 
-  let assignedColor: string | null = null;
-  let presenceList: UserPresence[] = [];
+  // Subscriptions
+  private messageHandlers: Set<MessageHandler> = new Set();
+  private stateHandlers: Set<StateChangeHandler> = new Set();
 
-  console.log(`[WebSocket] Connecting to ${url} (room: "${roomId}", user: "${userId}")...`);
-  const ws = new WebSocket(url);
+  constructor(config: WebSocketClientConfig = {}) {
+    const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost';
+    const defaultPort = '3000';
+    const port =
+      typeof window !== 'undefined' && (window.location.port === '5173' || window.location.port === '')
+        ? defaultPort
+        : typeof window !== 'undefined'
+          ? window.location.port
+          : defaultPort;
 
-  function sendMessage(msg: ClientMessage): void {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
-    } else {
-      console.warn('[WebSocket] Cannot send message, socket is not open:', msg);
+    this.url = config.url || `${protocol}//${host}:${port}`;
+    this.baseDelayMs = config.baseDelayMs ?? 1000;
+    this.maxDelayMs = config.maxDelayMs ?? 10000;
+    this.backoffFactor = config.backoffFactor ?? 1.5;
+    this.throttleIntervalMs = config.throttleIntervalMs ?? 33; // ~30Hz
+  }
+
+  public getState(): ConnectionState {
+    return this.state;
+  }
+
+  public isConnected(): boolean {
+    return this.state === 'connected' && this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  private setState(newState: ConnectionState): void {
+    if (this.state !== newState) {
+      this.state = newState;
+      for (const handler of this.stateHandlers) {
+        try {
+          handler(newState);
+        } catch (err) {
+          console.error('[WebSocketClient] Error in state change handler:', err);
+        }
+      }
     }
   }
 
-  ws.addEventListener('open', () => {
-    console.log('[WebSocket] Connection established. Sending "join" request...');
-    const joinMsg: ClientMessage = {
-      type: 'join',
-      roomId,
-      userId,
-    };
-    sendMessage(joinMsg);
-  });
-
-  ws.addEventListener('message', (event) => {
-    const rawData = typeof event.data === 'string' ? event.data : '';
-    const result = safeParseServerMessageJson(rawData);
-
-    if (!result.success) {
-      console.warn('[WebSocket] Dropping invalid server message:', result.error);
+  /**
+   * Connects to the WebSocket server.
+   */
+  public connect(): void {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    const message = result.data;
-    switch (message.type) {
-      case 'welcome': {
-        assignedColor = message.assignedColor;
-        presenceList = message.presence;
-        console.log(
-          `[WebSocket] Received "welcome"! Assigned color: ${assignedColor}. Active users:`,
-          presenceList
-        );
-        if (options.onWelcome) options.onWelcome(message);
-        break;
-      }
+    this.isDeliberateLeave = false;
+    this.clearReconnectTimer();
+    this.setState(this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
-      case 'user-joined': {
-        console.log(`[WebSocket] User joined: ${message.userId} (color: ${message.color})`);
-        if (options.onUserJoined) options.onUserJoined(message);
-        break;
-      }
-
-      case 'user-left': {
-        console.log(`[WebSocket] User left: ${message.userId}`);
-        presenceList = presenceList.filter((u) => u.userId !== message.userId);
-        if (options.onUserLeft) options.onUserLeft(message);
-        break;
-      }
-
-      case 'presence-update': {
-        presenceList = message.users;
-        console.log('[WebSocket] Presence updated:', presenceList);
-        if (options.onPresenceUpdate) options.onPresenceUpdate(message);
-        break;
-      }
-
-      default:
-        console.log(`[WebSocket] Received message "${message.type}":`, message);
-        break;
+    try {
+      console.log(`[WebSocketClient] Connecting to ${this.url}...`);
+      this.ws = new WebSocket(this.url);
+      this.setupSocketListeners(this.ws);
+    } catch (err) {
+      console.error('[WebSocketClient] Failed to create WebSocket connection:', err);
+      this.scheduleReconnect();
     }
-  });
+  }
 
-  ws.addEventListener('close', () => {
-    console.log('[WebSocket] Connection closed.');
-  });
+  /**
+   * Disconnects cleanly, marking the leave as deliberate so auto-reconnect is not triggered.
+   */
+  public disconnect(): void {
+    this.isDeliberateLeave = true;
+    this.clearReconnectTimer();
+    this.clearThrottleTimer();
 
-  ws.addEventListener('error', (error) => {
-    console.error('[WebSocket] Error:', error);
-  });
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch {
+        // ignore socket errors on close
+      }
+      this.ws = null;
+    }
 
-  return {
-    ws,
-    sendMessage,
-    getUserId: () => userId,
-    getRoomId: () => roomId,
-    getAssignedColor: () => assignedColor,
-    getPresence: () => presenceList,
-  };
+    this.setState('disconnected');
+    console.log('[WebSocketClient] Deliberately disconnected.');
+  }
+
+  private setupSocketListeners(socket: WebSocket): void {
+    socket.addEventListener('open', () => {
+      if (this.ws !== socket) return;
+      console.log('[WebSocketClient] Connected successfully.');
+      this.reconnectAttempts = 0;
+      this.setState('connected');
+      this.flushThrottled();
+    });
+
+    socket.addEventListener('message', (event: MessageEvent) => {
+      if (this.ws !== socket) return;
+      const rawData = typeof event.data === 'string' ? event.data : '';
+      const result = safeParseServerMessageJson(rawData);
+
+      if (!result.success) {
+        console.warn('[WebSocketClient] Dropping invalid server message:', result.error);
+        return;
+      }
+
+      const serverMessage = result.data;
+      for (const handler of this.messageHandlers) {
+        try {
+          handler(serverMessage);
+        } catch (err) {
+          console.error('[WebSocketClient] Error in message handler:', err);
+        }
+      }
+    });
+
+    socket.addEventListener('close', (event: CloseEvent) => {
+      if (this.ws !== socket) return;
+      this.ws = null;
+      console.log(`[WebSocketClient] Connection closed (code=${event.code} reason="${event.reason}").`);
+
+      if (this.isDeliberateLeave) {
+        this.setState('disconnected');
+      } else {
+        this.setState('reconnecting');
+        this.scheduleReconnect();
+      }
+    });
+
+    socket.addEventListener('error', (err: Event) => {
+      if (this.ws !== socket) return;
+      console.error('[WebSocketClient] Socket error occurred:', err);
+    });
+  }
+
+  private scheduleReconnect(): void {
+    if (this.isDeliberateLeave || this.reconnectTimer !== null) {
+      return;
+    }
+
+    const jitter = Math.random() * 200;
+    const computedDelay =
+      Math.min(this.baseDelayMs * Math.pow(this.backoffFactor, this.reconnectAttempts), this.maxDelayMs) + jitter;
+
+    this.reconnectAttempts++;
+    console.log(
+      `[WebSocketClient] Reconnecting in ${Math.round(computedDelay)}ms (attempt #${this.reconnectAttempts})...`
+    );
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, computedDelay);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  /**
+   * Subscribes to validated incoming server messages.
+   * Discards invalid messages automatically.
+   * Returns an unsubscription function.
+   */
+  public onMessage(handler: MessageHandler): () => void {
+    this.messageHandlers.add(handler);
+    return () => {
+      this.messageHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * Subscribes to connection state changes.
+   * Returns an unsubscription function.
+   */
+  public onStateChange(handler: StateChangeHandler): () => void {
+    this.stateHandlers.add(handler);
+    return () => {
+      this.stateHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * Sends a typed client message.
+   * Throttles "cursor-move" (latest position) and "stroke-point" (batched in order)
+   * to a max of ~30 times/second. All other messages are sent immediately.
+   */
+  public send(message: ClientMessage): void {
+    if (message.type === 'leave') {
+      this.isDeliberateLeave = true;
+      this.flushThrottled();
+      this.sendRaw(message);
+      return;
+    }
+
+    if (message.type === 'cursor-move') {
+      // Retain latest cursor position for this throttle tick
+      this.pendingCursorMove = message;
+      this.ensureThrottleTimer();
+      return;
+    }
+
+    if (message.type === 'stroke-point') {
+      // Buffer intermediate stroke point without dropping
+      this.pendingStrokePoints.push(message);
+      this.ensureThrottleTimer();
+      return;
+    }
+
+    // For stroke-end or other commands, flush any buffered stroke-points first
+    if (message.type === 'stroke-end') {
+      this.flushThrottled();
+    }
+
+    this.sendRaw(message);
+  }
+
+  private sendRaw(message: ClientMessage): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (err) {
+        console.error('[WebSocketClient] Error sending message:', err, message);
+      }
+    } else {
+      console.warn('[WebSocketClient] Cannot send message, socket is not open:', message.type);
+    }
+  }
+
+  private ensureThrottleTimer(): void {
+    if (this.throttleTimer === null) {
+      this.throttleTimer = setTimeout(() => {
+        this.throttleTimer = null;
+        this.flushThrottled();
+      }, this.throttleIntervalMs);
+    }
+  }
+
+  private clearThrottleTimer(): void {
+    if (this.throttleTimer !== null) {
+      clearTimeout(this.throttleTimer);
+      this.throttleTimer = null;
+    }
+  }
+
+  /**
+   * Flushes any pending throttled cursor moves and batched stroke points.
+   */
+  public flushThrottled(): void {
+    this.clearThrottleTimer();
+
+    // 1. Flush pending cursor-move (latest position)
+    if (this.pendingCursorMove !== null) {
+      const cursorMsg = this.pendingCursorMove;
+      this.pendingCursorMove = null;
+      this.sendRaw(cursorMsg);
+    }
+
+    // 2. Flush pending stroke-point batch (in exact chronological order)
+    if (this.pendingStrokePoints.length > 0) {
+      const pointsToFlush = this.pendingStrokePoints;
+      this.pendingStrokePoints = [];
+      for (const ptMsg of pointsToFlush) {
+        this.sendRaw(ptMsg);
+      }
+    }
+  }
+}
+
+// Backward compatibility helper
+export function initWebSocket(url?: string): WebSocketClient {
+  const client = new WebSocketClient({ url });
+  client.connect();
+  return client;
 }

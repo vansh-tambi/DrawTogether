@@ -7,12 +7,25 @@ import { rooms } from './rooms';
 import { drawingState } from './drawing-state';
 import { safeParseClientMessageJson, type ServerMessage, type Stroke } from '../shared/protocol';
 
-// Map of in-progress strokes keyed by `${roomId}_${strokeId}`
-const activeStrokes = new Map<string, Stroke>();
+// In-progress strokes are scoped by room and then stroke ID. Keeping the room
+// as a separate map avoids delimiter collisions and cross-room cleanup bugs.
+const activeStrokes = new Map<string, Map<string, Stroke>>();
+
+function getActiveStrokesForRoom(roomId: string): Map<string, Stroke> {
+  let strokes = activeStrokes.get(roomId);
+  if (!strokes) {
+    strokes = new Map<string, Stroke>();
+    activeStrokes.set(roomId, strokes);
+  }
+  return strokes;
+}
 
 function cleanupActiveStrokesForUser(userId: string, roomId: string): void {
   const room = rooms.getRoom(roomId);
-  for (const [key, stroke] of activeStrokes.entries()) {
+  const roomStrokes = activeStrokes.get(roomId);
+  if (!roomStrokes) return;
+
+  for (const [strokeId, stroke] of roomStrokes.entries()) {
     if (stroke.userId === userId) {
       if (stroke.points.length > 1) {
         drawingState.recordStroke(roomId, stroke);
@@ -21,8 +34,12 @@ function cleanupActiveStrokesForUser(userId: string, roomId: string): void {
         }
         console.log(`[Server] Finalized in-flight stroke "${stroke.id}" for disconnected user "${userId}".`);
       }
-      activeStrokes.delete(key);
+      roomStrokes.delete(strokeId);
     }
+  }
+
+  if (roomStrokes.size === 0) {
+    activeStrokes.delete(roomId);
   }
 }
 
@@ -71,10 +88,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const reqUrl = req.url === '/' ? '/index.html' : req.url || '/index.html';
+  const requestedPath = (req.url || '/').split('?')[0] || '/';
+  const reqUrl = requestedPath === '/' ? '/index.html' : requestedPath;
   const filePath = path.normalize(path.join(DIST_DIR, reqUrl));
+  const relativePath = path.relative(DIST_DIR, filePath);
 
-  if (!filePath.startsWith(DIST_DIR)) {
+  if (relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
     res.writeHead(403);
     res.end('403 Forbidden');
     return;
@@ -158,10 +177,13 @@ wss.on('connection', (ws: WebSocket, req) => {
         // Leave previous room if any
         if (currentRoomId && currentUserId) {
           const oldRoom = rooms.getRoom(currentRoomId);
-          if (oldRoom) {
+          if (oldRoom && oldRoom.getClient(currentUserId)?.ws === ws) {
+            cleanupActiveStrokesForUser(currentUserId, currentRoomId);
             oldRoom.removeClient(currentUserId);
             oldRoom.broadcast({ type: 'user-left', userId: currentUserId });
-            rooms.removeRoomIfEmpty(currentRoomId);
+            if (rooms.removeRoomIfEmpty(currentRoomId)) {
+              drawingState.cleanRoom(currentRoomId);
+            }
           }
         }
 
@@ -198,6 +220,14 @@ wss.on('connection', (ws: WebSocket, req) => {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);
           if (room) {
+            const roomStrokes = getActiveStrokesForRoom(currentRoomId);
+
+            // A stroke ID must be unique within a room. Never let a retry or
+            // another client overwrite an existing in-progress stroke.
+            if (roomStrokes.has(msg.id)) {
+              break;
+            }
+
             // Relay to other room participants (excluding sender)
             const relayedMessage: ServerMessage = {
               type: 'stroke-start',
@@ -212,8 +242,7 @@ wss.on('connection', (ws: WebSocket, req) => {
             room.broadcast(relayedMessage, currentUserId);
 
             // Track active stroke in progress
-            const strokeKey = `${currentRoomId}_${msg.id}`;
-            activeStrokes.set(strokeKey, {
+            roomStrokes.set(msg.id, {
               id: msg.id,
               userId: currentUserId,
               tool: msg.tool,
@@ -230,6 +259,11 @@ wss.on('connection', (ws: WebSocket, req) => {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);
           if (room) {
+            const active = activeStrokes.get(currentRoomId)?.get(msg.strokeId);
+            if (!active || active.userId !== currentUserId) {
+              break;
+            }
+
             // Relay to other room participants (excluding sender)
             const relayedMessage: ServerMessage = {
               type: 'stroke-point',
@@ -241,11 +275,7 @@ wss.on('connection', (ws: WebSocket, req) => {
             room.broadcast(relayedMessage, currentUserId);
 
             // Append point to in-progress stroke
-            const strokeKey = `${currentRoomId}_${msg.strokeId}`;
-            const active = activeStrokes.get(strokeKey);
-            if (active) {
-              active.points.push({ x: msg.x, y: msg.y });
-            }
+            active.points.push({ x: msg.x, y: msg.y });
           }
         }
         break;
@@ -255,6 +285,12 @@ wss.on('connection', (ws: WebSocket, req) => {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);
           if (room) {
+            const roomStrokes = activeStrokes.get(currentRoomId);
+            const active = roomStrokes?.get(msg.strokeId);
+            if (!active || active.userId !== currentUserId) {
+              break;
+            }
+
             // Relay to other room participants (excluding sender)
             const relayedMessage: ServerMessage = {
               type: 'stroke-end',
@@ -264,15 +300,14 @@ wss.on('connection', (ws: WebSocket, req) => {
             room.broadcast(relayedMessage, currentUserId);
 
             // Finalize and persist completed stroke
-            const strokeKey = `${currentRoomId}_${msg.strokeId}`;
-            const active = activeStrokes.get(strokeKey);
-            if (active) {
-              drawingState.recordStroke(currentRoomId, active);
-              activeStrokes.delete(strokeKey);
-              console.log(
-                `[Server] Recorded completed stroke "${active.id}" by "${currentUserId}" in room "${currentRoomId}" (${active.points.length} points).`
-              );
+            drawingState.recordStroke(currentRoomId, active);
+            roomStrokes?.delete(msg.strokeId);
+            if (roomStrokes?.size === 0) {
+              activeStrokes.delete(currentRoomId);
             }
+            console.log(
+              `[Server] Recorded completed stroke "${active.id}" by "${currentUserId}" in room "${currentRoomId}" (${active.points.length} points).`
+            );
           }
         }
         break;
@@ -374,7 +409,7 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'leave': {
         if (currentRoomId && currentUserId) {
           const room = rooms.getRoom(currentRoomId);
-          if (room) {
+          if (room && room.getClient(currentUserId)?.ws === ws) {
             cleanupActiveStrokesForUser(currentUserId, currentRoomId);
             room.removeClient(currentUserId);
             console.log(`[Server] User "${currentUserId}" left room "${currentRoomId}".`);
@@ -398,7 +433,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   ws.on('close', (code, reason) => {
     if (currentRoomId && currentUserId) {
       const room = rooms.getRoom(currentRoomId);
-      if (room) {
+      if (room && room.getClient(currentUserId)?.ws === ws) {
         cleanupActiveStrokesForUser(currentUserId, currentRoomId);
         room.removeClient(currentUserId);
         console.log(

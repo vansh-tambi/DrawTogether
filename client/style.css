@@ -69,8 +69,10 @@ canvas#canvas.is-pan-tool:active {
 header {
   position: fixed;
   top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
   width: 94%;
   max-width: 64rem;
   z-index: 30;
@@ -85,6 +87,8 @@ header {
   -webkit-backdrop-filter: blur(40px);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.06);
   transition: all 150ms ease;
+  transform: none !important;
+  translate: 0 0 !important;
 }
 
 /* ==========================================================================
@@ -93,9 +97,6 @@ header {
 
 #dock-panel {
   position: fixed;
-  bottom: 1.25rem;
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -107,8 +108,19 @@ header {
   -webkit-backdrop-filter: blur(40px);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.06);
   max-width: 96vw;
+  width: fit-content;
   touch-action: none;
   user-select: none;
+}
+
+#dock-panel:not(.is-moved) {
+  bottom: 1.25rem !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  transform: none !important;
+  translate: 0 0 !important;
 }
 
 #dock-body {

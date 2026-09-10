@@ -500,11 +500,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Reset dock position to default bottom-center
   function resetDockPosition(): void {
+    dockPanel.classList.remove('is-moved');
     dockPanel.style.left = '';
     dockPanel.style.top = '';
     dockPanel.style.bottom = '';
+    dockPanel.style.right = '';
+    dockPanel.style.margin = '';
     dockPanel.style.transform = '';
-    dockPanel.classList.add('bottom-5', 'left-1/2', '-translate-x-1/2');
     isDockMoved = false;
     btnDockReset?.classList.add('hidden');
     try {
@@ -562,8 +564,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasDragged) return;
 
     if (!isDockMoved) {
-      dockPanel.classList.remove('bottom-5', 'left-1/2', '-translate-x-1/2');
+      dockPanel.classList.add('is-moved');
       dockPanel.style.bottom = 'auto';
+      dockPanel.style.right = 'auto';
+      dockPanel.style.margin = '0';
       dockPanel.style.transform = 'none';
       isDockMoved = true;
       btnDockReset?.classList.remove('hidden');
@@ -622,13 +626,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPosStr) {
       const savedPos = JSON.parse(savedPosStr);
       if (savedPos && savedPos.left && savedPos.top) {
-        dockPanel.classList.remove('bottom-5', 'left-1/2', '-translate-x-1/2');
-        dockPanel.style.bottom = 'auto';
-        dockPanel.style.transform = 'none';
-        dockPanel.style.left = savedPos.left;
-        dockPanel.style.top = savedPos.top;
-        isDockMoved = true;
-        btnDockReset?.classList.remove('hidden');
+        const parsedLeft = parseFloat(savedPos.left);
+        const parsedTop = parseFloat(savedPos.top);
+        if (
+          !isNaN(parsedLeft) && !isNaN(parsedTop) &&
+          parsedLeft >= 10 && parsedLeft < window.innerWidth - 120 &&
+          parsedTop >= 10 && parsedTop < window.innerHeight - 80
+        ) {
+          dockPanel.classList.add('is-moved');
+          dockPanel.style.bottom = 'auto';
+          dockPanel.style.right = 'auto';
+          dockPanel.style.margin = '0';
+          dockPanel.style.transform = 'none';
+          dockPanel.style.left = `${parsedLeft}px`;
+          dockPanel.style.top = `${parsedTop}px`;
+          isDockMoved = true;
+          btnDockReset?.classList.remove('hidden');
+        } else {
+          localStorage.removeItem('drawtogether-dock-pos');
+        }
       }
     }
   } catch {

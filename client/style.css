@@ -506,11 +506,11 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
    ========================================================================== */
 
 .color-tab {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 6px;
-  color: #9CA3AF;
+  padding: 4px 11px;
+  border-radius: 7px;
+  color: #6B7280;
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
@@ -519,15 +519,15 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
 }
 
 .color-tab:hover {
-  color: #6B7280;
-  background: rgba(0, 0, 0, 0.04);
+  color: #374151;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .color-tab.is-active {
-  color: #374151;
-  background: rgba(255, 255, 255, 0.70);
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  color: #111827;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .swatch-grid {
@@ -535,6 +535,11 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   padding: 3px;
+}
+
+.swatch-grid.hidden,
+.hidden {
+  display: none !important;
 }
 
 /* Curated Swatch Buttons */
@@ -1021,8 +1026,58 @@ body.dark-mode .presence-avatar-btn {
 /* Modals & Shortcuts list theme-aware styling */
 #modal-info > div,
 #modal-clear > div {
-  background: #ffffff;
-  border-color: #e4e4e7;
+  background: #ffffff !important;
+  border-color: #e4e4e7 !important;
+  color: #111827 !important;
+}
+
+#modal-info h3,
+#modal-clear h3 {
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+
+#modal-info p,
+#modal-clear p {
+  color: #374151 !important; /* Highly readable dark slate in light mode */
+}
+
+#modal-info .modal-info-footer {
+  color: #4B5563 !important;
+  font-weight: 500 !important;
+}
+
+#modal-info .grid > div {
+  background: #F9FAFB !important;
+  border-color: #E5E7EB !important;
+  color: #1F2937 !important;
+}
+
+#modal-info .grid > div:hover {
+  background: #F3F4F6 !important;
+  border-color: #D1D5DB !important;
+}
+
+#modal-info .grid > div span {
+  color: #1F2937 !important;
+  font-weight: 600 !important;
+}
+
+#modal-info kbd {
+  background: #FFFFFF !important;
+  border-color: #D1D5DB !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+#modal-info button#btn-info-close {
+  color: #4B5563 !important;
+}
+
+#modal-info button#btn-info-close:hover {
+  color: #111827 !important;
+  background: #F3F4F6 !important;
 }
 
 body.dark-mode #modal-info > div,
@@ -1044,6 +1099,10 @@ body.dark-mode #modal-info .grid > div:hover {
   background: #27272a !important;
 }
 
+body.dark-mode #modal-info .grid > div span {
+  color: #e4e4e7 !important;
+}
+
 body.dark-mode #modal-info kbd {
   background: #2a2a30 !important;
   border-color: #3f3f46 !important;
@@ -1051,12 +1110,18 @@ body.dark-mode #modal-info kbd {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
-body.dark-mode #modal-info h3 {
+body.dark-mode #modal-info h3,
+body.dark-mode #modal-clear h3 {
   color: #f4f4f5 !important;
 }
 
-body.dark-mode #modal-info p {
+body.dark-mode #modal-info p,
+body.dark-mode #modal-clear p {
   color: #a1a1aa !important;
+}
+
+body.dark-mode #modal-info .modal-info-footer {
+  color: #71717a !important;
 }
 
 body.dark-mode #modal-info button#btn-info-close {

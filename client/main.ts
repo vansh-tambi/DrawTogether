@@ -204,10 +204,44 @@ document.addEventListener('DOMContentLoaded', () => {
       swatchGridPastel.classList.remove('hidden');
       swatchGridPrimary.classList.add('hidden');
     }
+
+    const activeGrid = tab === 'primary' ? swatchGridPrimary : swatchGridPastel;
+    const currentColor = canvasEngine.getColor()?.toLowerCase();
+    const swatches = activeGrid.querySelectorAll<HTMLButtonElement>('.swatch-btn');
+    let hasActiveInGrid = false;
+
+    swatches.forEach((btn) => {
+      const match = btn.getAttribute('data-color')?.toLowerCase() === currentColor;
+      btn.classList.toggle('is-active', match);
+      if (match) hasActiveInGrid = true;
+    });
+
+    // If current color is not present in newly opened tab, select first swatch from this palette
+    if (!hasActiveInGrid && swatches.length > 0) {
+      const firstColor = swatches[0].getAttribute('data-color');
+      if (firstColor) {
+        selectColor(firstColor);
+      }
+    }
   }
 
-  tabPrimary.addEventListener('click', () => switchColorTab('primary'));
-  tabPastel.addEventListener('click', () => switchColorTab('pastel'));
+  tabPrimary.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    switchColorTab('primary');
+  });
+  tabPrimary.addEventListener('click', (e) => {
+    e.stopPropagation();
+    switchColorTab('primary');
+  });
+
+  tabPastel.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    switchColorTab('pastel');
+  });
+  tabPastel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    switchColorTab('pastel');
+  });
 
   // ==========================================================================
   // Toolbar Tool Switching & Mode Handling

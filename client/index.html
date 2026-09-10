@@ -38,27 +38,21 @@
       <span class="font-display font-bold text-lg tracking-tight text-zinc-900">DrawTogether</span>
     </div>
 
-    <!-- Center: Enhanced Connection Status Pill -->
-    <div class="flex items-center">
-      <div id="connection-pill" class="flex items-center space-x-2.5 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md bg-white/50 border border-white/40 shadow-sm transition-colors">
-        <span class="relative flex h-3 w-3">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 ring-4 ring-green-400/40"></span>
-        </span>
-        <span id="connection-text" class="font-semibold text-zinc-700">Connected</span>
-        <span id="participant-count-text" class="font-semibold text-zinc-500">(1 User)</span>
+    <!-- Center: Zoom / Google Meet Style Presence Cluster & Popover -->
+    <div class="relative flex items-center justify-center">
+      <div id="presence-container" class="relative flex items-center"></div>
+
+      <!-- Hidden compatibility container for legacy status element queries -->
+      <div id="connection-pill" class="hidden" aria-hidden="true">
+        <span id="connection-text">Connected</span>
+        <span id="participant-count-text"></span>
       </div>
     </div>
 
-    <!-- Right: Vertical User List, +N More, Settings Gear -->
-    <div class="flex items-center space-x-3">
-      <!-- User List Container (rendered by PresenceUI) -->
-      <div id="presence-container" class="flex items-center"></div>
-
-      <div class="h-5 w-px bg-zinc-300/50"></div>
-
+    <!-- Right: Share Room Link, Help Info, Theme Toggle -->
+    <div class="flex items-center space-x-2.5">
       <!-- Share Room Link -->
-      <button id="btn-share" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-600 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer backdrop-blur-sm" title="Copy Room Invite Link">
+      <button id="btn-share" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-white/50 dark:bg-zinc-900/50 hover:bg-white/80 dark:hover:bg-zinc-800 border border-white/40 dark:border-zinc-800 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer backdrop-blur-sm" title="Copy Room Invite Link">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
@@ -67,7 +61,7 @@
       </button>
 
       <!-- Keyboard Shortcuts / Help Info Button -->
-      <button id="btn-info" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Shortcuts & Info">
+      <button id="btn-info" class="p-2 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 bg-white/50 dark:bg-zinc-900/50 hover:bg-white/80 dark:hover:bg-zinc-800 border border-white/40 dark:border-zinc-800 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Shortcuts & Info">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <line x1="12" y1="16" x2="12" y2="12"/>
@@ -75,11 +69,14 @@
         </svg>
       </button>
 
-      <!-- Settings Gear Icon -->
-      <button id="btn-settings" class="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 bg-white/50 hover:bg-white/80 border border-white/40 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      <!-- Theme Toggle -->
+      <button id="btn-settings" class="p-2 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 bg-white/50 dark:bg-zinc-900/50 hover:bg-white/80 dark:hover:bg-zinc-800 border border-white/40 dark:border-zinc-800 transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-sm" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="theme-icon theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <svg class="theme-icon theme-icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
         </svg>
       </button>
     </div>
@@ -88,58 +85,129 @@
   <!-- ========================================================================
        Floating Bottom Control Dock (Heavy Glassmorphic Dashboard)
        ======================================================================== -->
-  <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-stretch p-3 rounded-2xl backdrop-blur-2xl bg-white/60 border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.06)] transition-all max-w-[96vw] overflow-x-auto" aria-label="Drawing Tools Dock">
-
-    <!-- ═══ Column A: Tool ═══ -->
-    <div class="flex flex-col items-center px-3">
-      <span class="dock-section-label">Tool</span>
-      <div class="flex items-center space-x-1 mt-1.5">
-        <!-- Brush / Pen Tool -->
-        <button id="tool-brush" class="dock-btn is-active" title="Pen (B)" aria-label="Pen Tool" data-tool-glow="purple">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
+  <nav id="dock-panel" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex flex-col p-2.5 rounded-2xl backdrop-blur-2xl bg-white/60 border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.06)] transition-all max-w-[96vw]" aria-label="Drawing Tools Dock">
+    <!-- Dock Top Bar: Drag Handle & Minimize Toggle -->
+    <div id="dock-header" class="flex items-center justify-between px-2 pb-1.5 cursor-grab select-none border-b border-black/5 dark:border-white/10 mb-1" title="Drag to move toolbar">
+      <div id="dock-drag-handle" class="flex items-center space-x-2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+        <svg class="dock-drag-grip w-3.5 h-3.5 opacity-60" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.5"/>
+          <circle cx="15" cy="6" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/>
+          <circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="18" r="1.5"/>
+          <circle cx="15" cy="18" r="1.5"/>
+        </svg>
+        <span class="text-[10px] font-semibold uppercase tracking-wider">Toolbar</span>
+      </div>
+      <div class="flex items-center space-x-1">
+        <button id="btn-dock-reset" type="button" class="dock-header-btn hidden text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" title="Reset toolbar to center bottom" aria-label="Reset position">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
           </svg>
         </button>
-
-        <!-- Highlighter Tool -->
-        <button id="tool-highlighter" class="dock-btn" title="Highlighter (H)" aria-label="Highlighter Tool" data-tool-glow="yellow">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m9 11-6 6v3h3l6-6"/>
-            <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
-          </svg>
-        </button>
-
-        <!-- Freehand Eraser Tool -->
-        <button id="tool-eraser" class="dock-btn" title="Eraser (E)" aria-label="Freehand Eraser Tool" data-tool-glow="rose">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
-            <path d="M22 21H7"/>
-            <path d="m5 11 9 9"/>
-          </svg>
-        </button>
-
-        <!-- Segment Trim Eraser Tool -->
-        <button id="tool-segment-eraser" class="dock-btn" title="Segment Eraser (X) - Click to trim line to intersection" aria-label="Segment Eraser Tool" data-tool-glow="orange">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="6" cy="6" r="3"/>
-            <circle cx="6" cy="18" r="3"/>
-            <line x1="20" y1="4" x2="8.12" y2="15.88"/>
-            <line x1="14.47" y1="14.48" x2="20" y2="20"/>
-            <line x1="8.12" y1="8.12" x2="12" y2="12"/>
-          </svg>
-        </button>
-
-        <!-- Pan / Select Tool -->
-        <button id="tool-pan" class="dock-btn" title="Pan Tool (V / P)" aria-label="Pan Tool" data-tool-glow="sky">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
-            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
-            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
-            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+        <button id="btn-dock-minimize" type="button" class="dock-header-btn text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" title="Minimize toolbar" aria-label="Minimize toolbar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
       </div>
     </div>
+
+    <!-- Dock Full Content (Columns A-D) -->
+    <div id="dock-body" class="flex items-stretch">
+      <!-- ═══ Column A: Tool ═══ -->
+      <div class="flex flex-col items-center px-2.5">
+        <span class="dock-section-label">Tool</span>
+        <div class="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1 justify-center max-w-[340px]">
+          <!-- Brush / Pen Tool -->
+          <button id="tool-brush" class="dock-btn is-active" title="Pen (B)" aria-label="Pen Tool" data-tool-glow="purple">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m18 15-6-6M9 21l3-3M2 22l6-6M9 9l7-7 5 5-7 7"/>
+            </svg>
+          </button>
+
+          <!-- Highlighter Tool -->
+          <button id="tool-highlighter" class="dock-btn" title="Highlighter (H)" aria-label="Highlighter Tool" data-tool-glow="yellow">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 11-6 6v3h3l6-6"/>
+              <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+            </svg>
+          </button>
+
+          <!-- Line Tool -->
+          <button id="tool-line" class="dock-btn" title="Straight Line (L) - Hold Shift for 45° snap" aria-label="Line Tool" data-tool-glow="blue">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="19" x2="19" y2="5"/>
+            </svg>
+          </button>
+
+          <!-- Arrow Tool -->
+          <button id="tool-arrow" class="dock-btn" title="Arrow (A) - Hold Shift for 45° snap" aria-label="Arrow Tool" data-tool-glow="emerald">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="19" x2="19" y2="5"/>
+              <polyline points="10 5 19 5 19 14"/>
+            </svg>
+          </button>
+
+          <!-- Rectangle Tool -->
+          <button id="tool-rectangle" class="dock-btn" title="Rectangle (R) - Hold Shift for Square" aria-label="Rectangle Tool" data-tool-glow="indigo">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            </svg>
+          </button>
+
+          <!-- Circle Tool -->
+          <button id="tool-circle" class="dock-btn" title="Circle / Ellipse (O) - Hold Shift for Circle" aria-label="Circle Tool" data-tool-glow="violet">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+            </svg>
+          </button>
+
+          <!-- Freehand Eraser Tool -->
+          <button id="tool-eraser" class="dock-btn" title="Eraser (E)" aria-label="Freehand Eraser Tool" data-tool-glow="rose">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+              <path d="M22 21H7"/>
+              <path d="m5 11 9 9"/>
+            </svg>
+          </button>
+
+          <!-- Segment Trim Eraser Tool -->
+          <button id="tool-segment-eraser" class="dock-btn" title="Segment Eraser (X) - Click to trim line to intersection" aria-label="Segment Eraser Tool" data-tool-glow="orange">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="6" r="3"/>
+              <circle cx="6" cy="18" r="3"/>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
+          </button>
+
+          <!-- Laser Pointer Tool -->
+          <button id="tool-laser" class="dock-btn" title="Laser Pointer (K) - Live presentation beam" aria-label="Laser Pointer Tool" data-tool-glow="rose">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <line x1="12" y1="2" x2="12" y2="6"/>
+              <line x1="12" y1="18" x2="12" y2="22"/>
+              <line x1="2" y1="12" x2="6" y2="12"/>
+              <line x1="18" y1="12" x2="22" y2="12"/>
+              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+            </svg>
+          </button>
+
+          <!-- Pan / Select Tool -->
+          <button id="tool-pan" class="dock-btn" title="Pan Tool (V / P)" aria-label="Pan Tool" data-tool-glow="sky">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+              <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+              <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
     <!-- Vertical Divider -->
     <div class="w-px self-stretch bg-gray-300/50 mx-1"></div>
@@ -235,15 +303,26 @@
           <button class="swatch-btn" data-color="#FEF3C7" style="--swatch-color: #FEF3C7;" title="Cream"></button>
         </div>
 
-        <!-- Custom Color Picker Button -->
-        <div class="relative mt-1.5 flex justify-center">
-          <button id="btn-custom-color" class="w-7 h-7 rounded-full border border-dashed border-zinc-300/60 hover:border-zinc-400 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-sm bg-white/40 backdrop-blur-sm" title="Custom Color Picker">
+        <!-- Custom Color Picker -->
+        <div id="custom-color-picker" class="relative mt-1.5 flex justify-center">
+          <button id="btn-custom-color" class="custom-color-trigger w-7 h-7 rounded-full border border-dashed border-zinc-300/60 hover:border-zinc-400 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-sm bg-white/40 backdrop-blur-sm" title="Choose a custom color" aria-label="Choose a custom color" aria-expanded="false" aria-controls="custom-color-popover">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
           </button>
-          <input type="color" id="custom-color-input" class="sr-only" value="#5B4FE9" />
+          <div id="custom-color-popover" class="custom-color-popover hidden" role="dialog" aria-label="Custom color picker">
+            <div class="custom-color-popover-header">
+              <span>Custom color</span>
+              <button id="btn-custom-color-close" type="button" class="custom-color-close" aria-label="Close color picker">×</button>
+            </div>
+            <input type="color" id="custom-color-input" class="custom-color-input" value="#5B4FE9" aria-label="Choose custom color" />
+            <div class="custom-color-value-row">
+              <input id="custom-color-hex" class="custom-color-hex" type="text" value="#5B4FE9" maxlength="7" spellcheck="false" aria-label="Hex color value" />
+              <button id="btn-custom-color-apply" type="button" class="custom-color-apply">Use</button>
+            </div>
+            <span id="custom-color-error" class="custom-color-error" role="status" aria-live="polite"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -285,24 +364,50 @@
         </button>
       </div>
     </div>
-  </nav>
+  </div><!-- /#dock-body -->
+
+  <!-- Dock Minimized Floating Strip (shown only when minimized) -->
+  <div id="dock-minimized-bar" class="hidden items-center justify-between px-2 py-0.5 cursor-grab select-none gap-3" title="Drag to move toolbar, click to expand">
+    <div class="flex items-center space-x-2">
+      <svg class="dock-drag-grip w-3.5 h-3.5 opacity-60 text-zinc-400" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="9" cy="6" r="1.5"/>
+        <circle cx="15" cy="6" r="1.5"/>
+        <circle cx="9" cy="12" r="1.5"/>
+        <circle cx="15" cy="12" r="1.5"/>
+        <circle cx="9" cy="18" r="1.5"/>
+        <circle cx="15" cy="18" r="1.5"/>
+      </svg>
+      <!-- Active Tool Name Preview -->
+      <span id="mini-tool-name" class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 capitalize">Pen</span>
+      <!-- Active Color Dot Preview -->
+      <span id="mini-color-dot" class="w-3.5 h-3.5 rounded-full border border-white/80 dark:border-white/30 shadow-sm" style="background-color: #1F1B2E;"></span>
+      <!-- Active Size Readout -->
+      <span id="mini-size-text" class="text-[11px] font-medium text-zinc-400">4pt</span>
+    </div>
+    <button id="btn-dock-expand" type="button" class="dock-header-btn text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" title="Expand toolbar" aria-label="Expand toolbar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+    </button>
+  </div>
+</nav>
 
   <!-- ========================================================================
        Clear Board Confirmation Modal (Two-step Protection)
        ======================================================================== -->
-  <div id="modal-clear" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
-    <div class="w-[90%] max-w-sm p-6 rounded-2xl bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.15)] scale-95 transition-transform duration-200 text-center">
-      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+  <div id="modal-clear" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="w-[90%] max-w-sm p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-200 text-center">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 6h18"/>
           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
         </svg>
       </div>
-      <h3 class="text-base font-semibold text-zinc-900 mb-1">Clear entire board?</h3>
-      <p class="text-xs text-zinc-500 mb-5 leading-relaxed">This will erase all strokes on your canvas. You can undo this action if needed.</p>
+      <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Clear entire board?</h3>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">This will erase all strokes on your canvas. You can undo this action if needed.</p>
       <div class="flex items-center space-x-2">
-        <button id="btn-modal-cancel" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-white/60 hover:bg-white/90 text-zinc-700 border border-white/40 transition-colors cursor-pointer backdrop-blur-sm">Cancel</button>
+        <button id="btn-modal-cancel" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer">Cancel</button>
         <button id="btn-modal-confirm" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 transition-colors cursor-pointer">Clear Board</button>
       </div>
     </div>
@@ -311,54 +416,86 @@
   <!-- ========================================================================
        Keyboard Shortcuts & Info Modal
        ======================================================================== -->
-  <div id="modal-info" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
-    <div class="w-[90%] max-w-md p-6 rounded-2xl bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.15)] scale-95 transition-transform duration-200">
-      <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200/50">
-        <div class="flex items-center space-x-2">
-          <span class="font-display font-bold text-base text-zinc-900">Keyboard Shortcuts</span>
+  <div id="modal-info" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="w-[90%] max-w-lg p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-200">
+      <div class="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-200/70 dark:border-zinc-800">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+              <line x1="6" y1="8" x2="6.01" y2="8"/>
+              <line x1="10" y1="8" x2="10.01" y2="8"/>
+              <line x1="14" y1="8" x2="14.01" y2="8"/>
+              <line x1="18" y1="8" x2="18.01" y2="8"/>
+              <line x1="6" y1="12" x2="6.01" y2="12"/>
+              <line x1="18" y1="12" x2="18.01" y2="12"/>
+              <line x1="10" y1="16" x2="14" y2="16"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-base text-zinc-900 dark:text-zinc-50 leading-tight">Keyboard Shortcuts</h3>
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">Quick commands to draw, navigate and edit</p>
+          </div>
         </div>
-        <button id="btn-info-close" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer">
+        <button id="btn-info-close" class="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer" aria-label="Close shortcuts">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
-      <div class="grid grid-cols-2 gap-2.5 text-xs text-zinc-600 mb-4">
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Pen / Brush</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">B</kbd>
+
+      <div class="grid grid-cols-2 gap-2 text-xs mb-4 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Pen / Brush</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">B</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Highlighter</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">H</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Highlighter</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">H</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Eraser</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">E</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Line Tool</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">L</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Segment Trim</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">X</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Arrow Tool</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">A</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Pan Tool</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">V</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Rectangle</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">R</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Undo</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">Ctrl+Z</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Circle / Ellipse</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">O</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Redo</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">Ctrl+Y</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Laser Pointer</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">K</kbd>
         </div>
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-white/30">
-          <span>Brush Size</span>
-          <kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-white/80 border border-zinc-200/50 shadow-sm">[ ]</kbd>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Eraser</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">E</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Segment Trim</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">X</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Pan Tool</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">V</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Undo / Redo</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">Ctrl+Z / Y</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+          <span class="font-medium text-zinc-800 dark:text-zinc-200">Size Adjust</span>
+          <kbd class="px-2 py-0.5 text-[11px] font-mono font-bold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 shadow-xs">[ / ]</kbd>
         </div>
       </div>
-      <p class="text-[11px] text-zinc-400 text-center">DrawTogether Real-time Multi-User Studio · Zero latency collaboration</p>
+      <p class="text-[11px] text-zinc-400 dark:text-zinc-500 text-center">DrawTogether Real-time Multi-User Studio · Zero latency collaboration</p>
     </div>
   </div>
 

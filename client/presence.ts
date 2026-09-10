@@ -168,12 +168,7 @@ export class PresenceUI {
         this.togglePopover();
       });
 
-      if (isLocal) {
-        const youDot = document.createElement('span');
-        youDot.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-indigo-500 border border-white dark:border-zinc-900 shadow-xs';
-        youDot.title = 'You';
-        avatarBtn.appendChild(youDot);
-      }
+      
 
       cluster.appendChild(avatarBtn);
     }

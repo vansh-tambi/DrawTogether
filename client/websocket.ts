@@ -65,9 +65,30 @@ export class WebSocketClient {
     const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost';
 
+    // 1. Check explicit config
+    // 2. Check Vite environment variable VITE_WS_URL
+    // 3. Check URL query parameter ?ws=
+    const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL
+      ? (import.meta as any).env.VITE_WS_URL
+      : null;
+
+    let queryWsUrl: string | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        queryWsUrl = params.get('ws') || params.get('server');
+      } catch {
+        // ignore
+      }
+    }
+
     let resolvedUrl: string;
     if (config.url) {
       resolvedUrl = config.url;
+    } else if (queryWsUrl) {
+      resolvedUrl = queryWsUrl;
+    } else if (envUrl) {
+      resolvedUrl = envUrl;
     } else if (typeof window !== 'undefined') {
       if (window.location.port === '5173') {
         // Local Vite dev server connecting to local backend
@@ -76,7 +97,7 @@ export class WebSocketClient {
         // Local or custom port (e.g. localhost:3000)
         resolvedUrl = `${protocol}//${host}:${window.location.port}`;
       } else {
-        // Production deployment with standard port (80/443 on Render/Railway/Fly)
+        // Production fallback
         resolvedUrl = `${protocol}//${host}`;
       }
     } else {

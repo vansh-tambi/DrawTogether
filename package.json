@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"tsx watch server/server.ts\" \"vite client\"",
-    "build": "npx vite build",
+    "build": "npx vite build client --outDir ../dist --emptyOutDir && node -e \"const fs=require('fs'); fs.cpSync('dist', 'client/dist', {recursive: true});\"",
     "build:check": "tsc --noEmit && vite build",
     "start": "tsx server/server.ts"
   },

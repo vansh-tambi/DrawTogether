@@ -1,4 +1,4 @@
-import { initCanvas } from './canvas';
+import { initCanvas, type CanvasTool } from './canvas';
 import { WebSocketClient, type ConnectionState } from './websocket';
 import { CursorOverlayManager } from './cursors';
 import { PresenceUI } from './presence';
@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements - Floating Dock Tools
   const toolBrushBtn = document.getElementById('tool-brush') as HTMLButtonElement;
   const toolHighlighterBtn = document.getElementById('tool-highlighter') as HTMLButtonElement;
+  const toolLineBtn = document.getElementById('tool-line') as HTMLButtonElement;
+  const toolArrowBtn = document.getElementById('tool-arrow') as HTMLButtonElement;
+  const toolRectangleBtn = document.getElementById('tool-rectangle') as HTMLButtonElement;
+  const toolCircleBtn = document.getElementById('tool-circle') as HTMLButtonElement;
+  const toolLaserBtn = document.getElementById('tool-laser') as HTMLButtonElement;
   const toolEraserBtn = document.getElementById('tool-eraser') as HTMLButtonElement;
   const toolSegmentEraserBtn = document.getElementById('tool-segment-eraser') as HTMLButtonElement;
   const toolPanBtn = document.getElementById('tool-pan') as HTMLButtonElement;
@@ -76,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userId = `user_${Math.random().toString(36).substring(2, 8)}`;
   const roomId = 'default-room';
 
-  const presenceUI = new PresenceUI(presenceContainerEl, userId);
+  const presenceUI = new PresenceUI(presenceContainerEl, userId, roomId);
 
   function formatShortId(id: string): string {
     if (id.length <= 10) return id;
@@ -170,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update Connection Status Pill
   function updateConnectionStatus(state: ConnectionState): void {
+    presenceUI.setConnectionState(state);
     if (!connectionPillEl || !connectionTextEl) return;
 
     // Reset dynamic classes on the pill
@@ -224,53 +230,84 @@ document.addEventListener('DOMContentLoaded', () => {
   const allToolButtons = [
     toolBrushBtn,
     toolHighlighterBtn,
+    toolLineBtn,
+    toolArrowBtn,
+    toolRectangleBtn,
+    toolCircleBtn,
+    toolLaserBtn,
     toolEraserBtn,
     toolSegmentEraserBtn,
     toolPanBtn,
-  ];
+  ].filter(Boolean);
 
-  function setActiveTool(tool: 'brush' | 'highlighter' | 'eraser' | 'segment-eraser' | 'pan'): void {
+  function setActiveTool(tool: CanvasTool): void {
     canvasEngine.setTool(tool);
 
     allToolButtons.forEach((btn) => btn.classList.remove('is-active'));
     canvasEl.classList.toggle('is-segment-eraser', tool === 'segment-eraser');
     canvasEl.classList.toggle('is-pan-tool', tool === 'pan');
+    canvasEl.classList.toggle('is-laser-tool', tool === 'laser');
 
     switch (tool) {
       case 'brush':
-        toolBrushBtn.classList.add('is-active');
+        toolBrushBtn?.classList.add('is-active');
         break;
       case 'highlighter':
-        toolHighlighterBtn.classList.add('is-active');
+        toolHighlighterBtn?.classList.add('is-active');
+        break;
+      case 'line':
+        toolLineBtn?.classList.add('is-active');
+        break;
+      case 'arrow':
+        toolArrowBtn?.classList.add('is-active');
+        break;
+      case 'rectangle':
+        toolRectangleBtn?.classList.add('is-active');
+        break;
+      case 'circle':
+        toolCircleBtn?.classList.add('is-active');
+        break;
+      case 'laser':
+        toolLaserBtn?.classList.add('is-active');
         break;
       case 'eraser':
-        toolEraserBtn.classList.add('is-active');
+        toolEraserBtn?.classList.add('is-active');
         break;
       case 'segment-eraser':
-        toolSegmentEraserBtn.classList.add('is-active');
+        toolSegmentEraserBtn?.classList.add('is-active');
         break;
       case 'pan':
-        toolPanBtn.classList.add('is-active');
+        toolPanBtn?.classList.add('is-active');
         break;
     }
 
     const toolDisplayNames: Record<string, string> = {
-      'brush': 'Pen',
-      'highlighter': 'Highlighter',
-      'eraser': 'Eraser',
+      brush: 'Pen',
+      highlighter: 'Highlighter',
+      line: 'Line',
+      arrow: 'Arrow',
+      rectangle: 'Rectangle',
+      circle: 'Circle',
+      laser: 'Laser',
+      eraser: 'Eraser',
       'segment-eraser': 'Segment',
-      'pan': 'Pan'
+      pan: 'Pan',
     };
     if (miniToolName) {
       miniToolName.textContent = toolDisplayNames[tool] || tool;
     }
   }
 
-  toolBrushBtn.addEventListener('click', () => setActiveTool('brush'));
-  toolHighlighterBtn.addEventListener('click', () => setActiveTool('highlighter'));
-  toolEraserBtn.addEventListener('click', () => setActiveTool('eraser'));
-  toolSegmentEraserBtn.addEventListener('click', () => setActiveTool('segment-eraser'));
-  toolPanBtn.addEventListener('click', () => setActiveTool('pan'));
+  toolBrushBtn?.addEventListener('click', () => setActiveTool('brush'));
+  toolHighlighterBtn?.addEventListener('click', () => setActiveTool('highlighter'));
+  toolLineBtn?.addEventListener('click', () => setActiveTool('line'));
+  toolArrowBtn?.addEventListener('click', () => setActiveTool('arrow'));
+  toolRectangleBtn?.addEventListener('click', () => setActiveTool('rectangle'));
+  toolCircleBtn?.addEventListener('click', () => setActiveTool('circle'));
+  toolLaserBtn?.addEventListener('click', () => setActiveTool('laser'));
+  toolEraserBtn?.addEventListener('click', () => setActiveTool('eraser'));
+  toolSegmentEraserBtn?.addEventListener('click', () => setActiveTool('segment-eraser'));
+  toolPanBtn?.addEventListener('click', () => setActiveTool('pan'));
 
   // ==========================================================================
   // Stroke Width & Quick Preset Radio Dots
@@ -739,6 +776,16 @@ document.addEventListener('DOMContentLoaded', () => {
       setActiveTool('brush');
     } else if (e.key === 'h' || e.key === 'H') {
       setActiveTool('highlighter');
+    } else if (e.key === 'l' || e.key === 'L') {
+      setActiveTool('line');
+    } else if (e.key === 'a' || e.key === 'A') {
+      setActiveTool('arrow');
+    } else if (e.key === 'r' || e.key === 'R') {
+      setActiveTool('rectangle');
+    } else if (e.key === 'o' || e.key === 'O' || e.key === 'c' || e.key === 'C') {
+      setActiveTool('circle');
+    } else if (e.key === 'k' || e.key === 'K') {
+      setActiveTool('laser');
     } else if (e.key === 'e' || e.key === 'E') {
       setActiveTool('eraser');
     } else if (e.key === 'x' || e.key === 'X') {
@@ -747,8 +794,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setActiveTool('pan');
     } else if (e.key === 'u' || e.key === 'U') {
       btnUndo.click();
-    } else if (e.key === 'r' || e.key === 'R') {
-      btnRedo.click();
     } else if (e.key === ']' || e.key === '+') {
       const next = Math.min(36, canvasEngine.getWidth() + 2);
       canvasEngine.setWidth(next);

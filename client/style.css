@@ -305,6 +305,58 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
   color: #075985;
 }
 
+/* Line: blue glow */
+.dock-btn[data-tool-glow="blue"].is-active {
+  background: #DBEAFE;
+  color: #1D4ED8;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.28), 0 4px 16px rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.50);
+}
+
+.dock-btn[data-tool-glow="blue"].is-active:hover {
+  background: #BFDBFE;
+  color: #1E40AF;
+}
+
+/* Arrow: emerald glow */
+.dock-btn[data-tool-glow="emerald"].is-active {
+  background: #D1FAE5;
+  color: #047857;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.28), 0 4px 16px rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.50);
+}
+
+.dock-btn[data-tool-glow="emerald"].is-active:hover {
+  background: #A7F3D0;
+  color: #065F46;
+}
+
+/* Rectangle: indigo glow */
+.dock-btn[data-tool-glow="indigo"].is-active {
+  background: #E0E7FF;
+  color: #4338CA;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.28), 0 4px 16px rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.50);
+}
+
+.dock-btn[data-tool-glow="indigo"].is-active:hover {
+  background: #C7D2FE;
+  color: #3730A3;
+}
+
+/* Circle: violet glow */
+.dock-btn[data-tool-glow="violet"].is-active {
+  background: #EDE9FE;
+  color: #6D28D9;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.28), 0 4px 16px rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.50);
+}
+
+.dock-btn[data-tool-glow="violet"].is-active:hover {
+  background: #DDD6FE;
+  color: #5B21B6;
+}
+
 .dock-btn.is-active svg {
   stroke: currentColor;
 }
@@ -691,6 +743,30 @@ body.dark-mode .dock-btn[data-tool-glow="sky"].is-active {
   border-color: #38BDF8;
 }
 
+body.dark-mode .dock-btn[data-tool-glow="blue"].is-active {
+  background: #1E3A8A;
+  color: #93C5FD;
+  border-color: #3B82F6;
+}
+
+body.dark-mode .dock-btn[data-tool-glow="emerald"].is-active {
+  background: #064E3B;
+  color: #6EE7B7;
+  border-color: #10B981;
+}
+
+body.dark-mode .dock-btn[data-tool-glow="indigo"].is-active {
+  background: #312E81;
+  color: #A5B4FC;
+  border-color: #6366F1;
+}
+
+body.dark-mode .dock-btn[data-tool-glow="violet"].is-active {
+  background: #4C1D95;
+  color: #C4B5FD;
+  border-color: #8B5CF6;
+}
+
 body.dark-mode .color-tab.is-active,
 body.dark-mode .size-dot-btn.is-active {
   color: #F8F7FF;
@@ -837,76 +913,100 @@ body.dark-mode .clear-canvas-btn {
 }
 
 /* ==========================================================================
-   Presence User List (Vertical Stack with Rounded-Rect Items)
+   Zoom / Google Meet Style Presence Badges, +More Pill & Popover
    ========================================================================== */
 
-.presence-user-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px 3px 3px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.30);
-  backdrop-filter: blur(8px);
-  transition: all 150ms ease-out;
+.presence-cluster {
+  user-select: none;
+  animation: presenceFadeIn 200ms ease-out forwards;
 }
 
-.presence-user-item:hover {
-  background: rgba(255, 255, 255, 0.70);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+@keyframes presenceFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.presence-avatar {
-  width: 22px;
-  height: 22px;
+.presence-name-badge {
+  background: rgba(255, 255, 255, 0.60);
+  border: 1px solid rgba(255, 255, 255, 0.40);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.presence-name-badge:hover {
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.presence-avatar-circle {
+  border: 1.5px solid #ffffff;
+}
+
+body.dark-mode .presence-avatar-circle {
+  border-color: #27272a;
+}
+
+body.dark-mode .presence-name-badge {
+  background: rgba(39, 39, 42, 0.65);
+  border-color: rgba(63, 63, 70, 0.45);
+}
+
+body.dark-mode .presence-name-badge:hover {
+  background: rgba(63, 63, 70, 0.90);
+}
+
+.presence-more-pill {
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.presence-more-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Connected Users Dropdown Popover */
+.presence-popover {
+  animation: presencePopoverEnter 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+@keyframes presencePopoverEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Custom Scrollbar for Popover */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
   border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  color: #ffffff;
-  flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
-.presence-username {
-  font-size: 11px;
-  font-weight: 500;
-  color: #374151;
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.6);
 }
 
-.presence-you-tag {
-  font-size: 9px;
-  font-weight: 600;
-  color: #6D28D9;
-  background: rgba(139, 92, 246, 0.12);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-
-.presence-overflow-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #6B7280;
-  background: rgba(255, 255, 255, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.30);
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-  transition: all 150ms ease-out;
-}
-
-.presence-overflow-pill:hover {
-  background: rgba(255, 255, 255, 0.70);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+/* Canvas Laser Tool Cursor */
+.is-laser-tool {
+  cursor: crosshair;
 }

@@ -3,17 +3,36 @@ import type { UserPresence } from '../shared/protocol';
 export interface PresenceUser {
   userId: string;
   color: string;
+  displayName?: string;
 }
 
 export class PresenceUI {
   private container: HTMLElement;
   private users: Map<string, PresenceUser> = new Map();
   private localUserId: string;
+  private roomId: string = 'general';
+  private connectionState: 'connected' | 'reconnecting' | 'connecting' | 'disconnected' | 'offline' = 'connected';
+  private isPopoverOpen: boolean = false;
   public onCountChange?: (count: number) => void;
 
-  constructor(container: HTMLElement, localUserId: string) {
+  constructor(container: HTMLElement, localUserId: string, roomId?: string) {
     this.container = container;
     this.localUserId = localUserId;
+    if (roomId) this.roomId = roomId;
+
+    this.setupGlobalListeners();
+    this.render();
+  }
+
+  public setRoomId(roomId: string): void {
+    this.roomId = roomId;
+    if (this.isPopoverOpen) {
+      this.render();
+    }
+  }
+
+  public setConnectionState(state: 'connected' | 'reconnecting' | 'connecting' | 'disconnected' | 'offline'): void {
+    this.connectionState = state;
     this.render();
   }
 
@@ -39,19 +58,8 @@ export class PresenceUI {
   }
 
   public removeUser(userId: string): void {
-    const el = Array.from(this.container.querySelectorAll<HTMLElement>('[data-user-id]')).find(
-      (candidate) => candidate.dataset.userId === userId
-    );
-    if (el) {
-      el.classList.add('scale-75', 'opacity-0', 'transition-all', 'duration-200');
-      setTimeout(() => {
-        this.users.delete(userId);
-        this.render();
-      }, 180);
-    } else {
-      this.users.delete(userId);
-      this.render();
-    }
+    this.users.delete(userId);
+    this.render();
   }
 
   public getUserColor(userId: string): string | undefined {
@@ -60,6 +68,34 @@ export class PresenceUI {
 
   public getUserCount(): number {
     return this.users.size;
+  }
+
+  public togglePopover(force?: boolean): void {
+    this.isPopoverOpen = typeof force === 'boolean' ? force : !this.isPopoverOpen;
+    this.render();
+  }
+
+  public closePopover(): void {
+    if (this.isPopoverOpen) {
+      this.isPopoverOpen = false;
+      this.render();
+    }
+  }
+
+  private setupGlobalListeners(): void {
+    document.addEventListener('click', (e: MouseEvent) => {
+      if (!this.isPopoverOpen) return;
+      const target = e.target as HTMLElement | null;
+      if (target && !this.container.contains(target)) {
+        this.closePopover();
+      }
+    });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && this.isPopoverOpen) {
+        this.closePopover();
+      }
+    });
   }
 
   private getInitials(userId: string): string {
@@ -76,8 +112,11 @@ export class PresenceUI {
   }
 
   /**
-   * Renders a vertical stacked list of users showing avatar + truncated username.
-   * Local user gets a "(You)" tag. Overflow users shown as "+N More" pill.
+   * Renders Zoom / Google Meet style interactive participant badges:
+   * - Connection status dot (pulsing green for connected, amber for reconnecting)
+   * - User Name Badges: [Avatar] Name (You)
+   * - +N more pill when > 2 users
+   * - Interactive dropdown popover listing all connected users with color swatches & room details
    */
   public render(): void {
     const count = this.users.size;
@@ -93,53 +132,265 @@ export class PresenceUI {
       return 0;
     });
 
-    const maxVisible = 3;
+    // In Zoom / Google Meet style, display 1 or 2 badges and +more for the rest
+    const maxVisible = 2;
     const visibleUsers = allUsers.slice(0, maxVisible);
-    const overflowCount = allUsers.length - maxVisible;
+    const overflowCount = Math.max(0, allUsers.length - maxVisible);
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'flex flex-col items-end space-y-1';
+    const rootWrapper = document.createElement('div');
+    rootWrapper.className = 'relative flex items-center';
 
+    // Main Cluster Container (Pill)
+    const cluster = document.createElement('div');
+    cluster.className = 'presence-cluster flex items-center space-x-1.5 p-1 rounded-full backdrop-blur-md bg-white/70 dark:bg-zinc-900/70 border border-white/40 dark:border-zinc-800 shadow-sm transition-all';
+    cluster.setAttribute('role', 'region');
+    cluster.setAttribute('aria-label', 'Connected users');
+
+    // 1. Connection Status Dot
+    const statusDotWrapper = document.createElement('div');
+    statusDotWrapper.className = 'flex items-center pl-2 pr-1';
+    statusDotWrapper.title = `Status: ${this.connectionState}`;
+
+    const dotContainer = document.createElement('span');
+    dotContainer.className = 'relative flex h-2.5 w-2.5';
+
+    if (this.connectionState === 'connected') {
+      dotContainer.innerHTML = `
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      `;
+    } else if (this.connectionState === 'reconnecting' || this.connectionState === 'connecting') {
+      dotContainer.innerHTML = `
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+      `;
+    } else {
+      dotContainer.innerHTML = `
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-zinc-400"></span>
+      `;
+    }
+    statusDotWrapper.appendChild(dotContainer);
+    cluster.appendChild(statusDotWrapper);
+
+    // 2. Visible User Name Badges (Zoom / Google Meet style)
     for (const user of visibleUsers) {
       const isLocal = user.userId === this.localUserId;
       const initials = this.getInitials(user.userId);
       const displayName = this.formatShortId(user.userId);
 
+      const badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'presence-name-badge flex items-center space-x-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer select-none text-left';
+      badge.title = `${user.userId} ${isLocal ? '(You)' : ''} - Click to see all participants`;
+      badge.setAttribute('aria-expanded', this.isPopoverOpen ? 'true' : 'false');
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.togglePopover();
+      });
+
+      // Avatar circle
+      const avatar = document.createElement('div');
+      avatar.className = 'presence-avatar-circle flex items-center justify-center rounded-full text-white font-bold text-[10px] shadow-sm flex-shrink-0';
+      avatar.style.backgroundColor = user.color;
+      avatar.style.width = '22px';
+      avatar.style.height = '22px';
+      avatar.textContent = initials;
+
+      // User name label
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'presence-name-text text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-[80px]';
+      nameSpan.textContent = displayName;
+
+      badge.append(avatar, nameSpan);
+
+      // (You) tag for local user
+      if (isLocal) {
+        const youTag = document.createElement('span');
+        youTag.className = 'presence-you-chip text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300';
+        youTag.textContent = 'You';
+        badge.appendChild(youTag);
+      }
+
+      cluster.appendChild(badge);
+    }
+
+    // 3. Overflow "+more" Badge (Zoom / Google Meet style)
+    if (overflowCount > 0) {
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'presence-more-pill flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all cursor-pointer border border-zinc-200/50 dark:border-zinc-700/50';
+      moreBtn.title = `+${overflowCount} more connected user${overflowCount > 1 ? 's' : ''} - Click to view list`;
+      moreBtn.setAttribute('aria-expanded', this.isPopoverOpen ? 'true' : 'false');
+      moreBtn.innerHTML = `<span>+${overflowCount} more</span>`;
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.togglePopover();
+      });
+      cluster.appendChild(moreBtn);
+    } else if (visibleUsers.length === 0) {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'text-xs text-zinc-500 px-2';
+      placeholder.textContent = 'Connecting...';
+      cluster.appendChild(placeholder);
+    }
+
+    rootWrapper.appendChild(cluster);
+
+    // 4. Connected Users Popover List (when clicked)
+    if (this.isPopoverOpen) {
+      const popover = this.buildPopover(allUsers);
+      rootWrapper.appendChild(popover);
+    }
+
+    this.container.replaceChildren(rootWrapper);
+  }
+
+  /**
+   * Constructs the Connected Users popover dropdown
+   */
+  private buildPopover(allUsers: PresenceUser[]): HTMLElement {
+    const popover = document.createElement('div');
+    popover.className = 'presence-popover absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-72 sm:w-80 rounded-2xl p-3.5 backdrop-blur-2xl bg-white/95 dark:bg-zinc-900/95 border border-white/60 dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_1px_3px_rgba(0,0,0,0.06)] animate-in fade-in zoom-in-95 duration-150';
+    popover.setAttribute('role', 'dialog');
+    popover.setAttribute('aria-modal', 'false');
+    popover.setAttribute('aria-label', 'Connected Participants List');
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between pb-2.5 mb-2 border-b border-zinc-200/60 dark:border-zinc-800';
+
+    const titleArea = document.createElement('div');
+    titleArea.className = 'flex items-center space-x-2';
+
+    const title = document.createElement('span');
+    title.className = 'text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400';
+    title.textContent = 'Connected Users';
+
+    const countBadge = document.createElement('span');
+    countBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300/40 dark:border-emerald-800/40';
+    countBadge.textContent = `${allUsers.length} online`;
+
+    titleArea.append(title, countBadge);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer';
+    closeBtn.setAttribute('aria-label', 'Close list');
+    closeBtn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    `;
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closePopover();
+    });
+
+    header.append(titleArea, closeBtn);
+    popover.appendChild(header);
+
+    // Scrollable Users List
+    const list = document.createElement('div');
+    list.className = 'flex flex-col space-y-1.5 max-h-64 overflow-y-auto pr-0.5 custom-scrollbar';
+
+    for (const user of allUsers) {
+      const isLocal = user.userId === this.localUserId;
+      const initials = this.getInitials(user.userId);
+
       const item = document.createElement('div');
-      item.className = 'presence-user-item';
-      item.dataset.userId = user.userId;
-      item.title = user.userId;
+      item.className = 'flex items-center justify-between p-2 rounded-xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 transition-colors group';
+
+      // Left: Avatar + Names
+      const userLeft = document.createElement('div');
+      userLeft.className = 'flex items-center space-x-2.5 min-w-0';
 
       const avatar = document.createElement('div');
-      avatar.className = 'presence-avatar';
+      avatar.className = 'w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0';
       avatar.style.backgroundColor = user.color;
       avatar.textContent = initials;
 
-      const username = document.createElement('span');
-      username.className = 'presence-username';
-      username.textContent = displayName;
+      const infoCol = document.createElement('div');
+      infoCol.className = 'flex flex-col min-w-0';
 
-      item.append(avatar, username);
+      const nameRow = document.createElement('div');
+      nameRow.className = 'flex items-center space-x-1.5';
+
+      const nameText = document.createElement('span');
+      nameText.className = 'text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[120px] sm:max-w-[140px]';
+      nameText.textContent = user.userId;
+      nameText.title = user.userId;
+      nameRow.appendChild(nameText);
 
       if (isLocal) {
-        const youTag = document.createElement('span');
-        youTag.className = 'presence-you-tag';
-        youTag.textContent = '(You)';
-        item.appendChild(youTag);
+        const youBadge = document.createElement('span');
+        youBadge.className = 'text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300';
+        youBadge.textContent = 'You';
+        nameRow.appendChild(youBadge);
       }
 
-      wrapper.appendChild(item);
+      const statusSubtitle = document.createElement('span');
+      statusSubtitle.className = 'text-[10px] text-zinc-400 dark:text-zinc-500';
+      statusSubtitle.textContent = isLocal ? 'Host (Drawing)' : 'Collaborator';
+
+      infoCol.append(nameRow, statusSubtitle);
+      userLeft.append(avatar, infoCol);
+
+      // Right: Assigned Color dot & active pulse
+      const userRight = document.createElement('div');
+      userRight.className = 'flex items-center space-x-2 flex-shrink-0';
+
+      const colorDot = document.createElement('div');
+      colorDot.className = 'w-3.5 h-3.5 rounded-full border border-white dark:border-zinc-800 shadow-sm';
+      colorDot.style.backgroundColor = user.color;
+      colorDot.title = `Drawing Color: ${user.color}`;
+
+      const activeBadge = document.createElement('span');
+      activeBadge.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      activeBadge.title = 'Active';
+
+      userRight.append(colorDot, activeBadge);
+      item.append(userLeft, userRight);
+      list.appendChild(item);
     }
 
-    if (overflowCount > 0) {
-      const remainingUsers = allUsers.slice(maxVisible).map((u) => u.userId).join(', ');
-      const overflow = document.createElement('div');
-      overflow.className = 'presence-overflow-pill';
-      overflow.title = `Other collaborators: ${remainingUsers}`;
-      overflow.textContent = `+${overflowCount} More`;
-      wrapper.appendChild(overflow);
-    }
+    popover.appendChild(list);
 
-    this.container.replaceChildren(wrapper);
+    // Popover Footer: Room Identity & Quick Share
+    const footer = document.createElement('div');
+    footer.className = 'mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800 flex items-center justify-between';
+
+    const roomInfo = document.createElement('div');
+    roomInfo.className = 'flex items-center space-x-1.5 text-[11px] text-zinc-500 dark:text-zinc-400';
+    roomInfo.innerHTML = `<span>Room:</span><span class="font-mono font-bold text-zinc-700 dark:text-zinc-200 truncate max-w-[90px]">${this.roomId}</span>`;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer';
+    copyBtn.innerHTML = `
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <span>Copy Link</span>
+    `;
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = `<span>Copied!</span>`;
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+        }, 1500);
+      } catch {
+        // clipboard fallback
+      }
+    });
+
+    footer.append(roomInfo, copyBtn);
+    popover.appendChild(footer);
+
+    return popover;
   }
 }

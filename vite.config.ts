@@ -7,6 +7,7 @@ export default defineConfig({
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
   },
+  envDir: resolve(__dirname, '.'),
   server: {
     port: 5173,
   },

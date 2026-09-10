@@ -127,7 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyTheme(theme: 'light' | 'dark'): void {
     const isDark = theme === 'dark';
     document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', isDark);
     document.body.classList.toggle('dark-mode', isDark);
+    document.body.classList.toggle('dark', isDark);
     canvasEngine.setTheme(theme);
     btnSettings.setAttribute('aria-pressed', String(isDark));
     btnSettings.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
@@ -162,10 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 120);
   }
 
-  // Update participant count in header badge (parenthesized format)
-  presenceUI.onCountChange = (count: number) => {
+  presenceUI.onCountChange = () => {
     if (participantCountTextEl) {
-      participantCountTextEl.textContent = count === 1 ? '(1 User)' : `(${count} Users)`;
+      participantCountTextEl.textContent = '';
     }
   };
 
@@ -173,32 +174,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const wsClient = new WebSocketClient();
 
-  // Update Connection Status Pill
+  // Update Connection Status
   function updateConnectionStatus(state: ConnectionState): void {
     presenceUI.setConnectionState(state);
-    if (!connectionPillEl || !connectionTextEl) return;
-
-    // Reset dynamic classes on the pill
-    connectionPillEl.className = 'flex items-center space-x-2.5 px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border shadow-sm transition-colors';
-
-    switch (state) {
-      case 'connected':
-        connectionPillEl.classList.add('bg-white/50', 'border-white/40', 'text-zinc-700');
-        connectionTextEl.textContent = 'Connected';
-        break;
-      case 'reconnecting':
-        connectionPillEl.classList.add('bg-amber-50/60', 'border-amber-200/40', 'text-amber-700');
-        connectionTextEl.textContent = 'Reconnecting...';
-        break;
-      case 'connecting':
-        connectionPillEl.classList.add('bg-blue-50/60', 'border-blue-200/40', 'text-blue-700');
-        connectionTextEl.textContent = 'Connecting...';
-        break;
-      case 'disconnected':
-      default:
-        connectionPillEl.classList.add('bg-zinc-100/60', 'border-zinc-200/40', 'text-zinc-600');
-        connectionTextEl.textContent = 'Offline';
-        break;
+    if (connectionPillEl) {
+      connectionPillEl.className = 'hidden';
+      connectionPillEl.style.display = 'none';
+    }
+    if (state === 'reconnecting') {
+      showToast('Reconnecting to room...');
+    } else if (state === 'disconnected') {
+      showToast('Disconnected from server');
     }
   }
 

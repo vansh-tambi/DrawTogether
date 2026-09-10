@@ -112,11 +112,11 @@ export class PresenceUI {
   }
 
   /**
-   * Renders Zoom / Google Meet style interactive participant badges:
-   * - Connection status dot (pulsing green for connected, amber for reconnecting)
-   * - User Name Badges: [Avatar] Name (You)
-   * - +N more pill when > 2 users
-   * - Interactive dropdown popover listing all connected users with color swatches & room details
+   * Renders avatar/dp stack:
+   * - Shows 3 to 4 circular user avatars/dp
+   * - Shows '...' pill if more than 4 users
+   * - Zero text in the header, zero green blinking circle
+   * - Clicking any avatar or '...' opens the full participants list
    */
   public render(): void {
     const count = this.users.size;
@@ -132,111 +132,72 @@ export class PresenceUI {
       return 0;
     });
 
-    // In Zoom / Google Meet style, display 1 or 2 badges and +more for the rest
-    const maxVisible = 2;
+    const maxVisible = 4;
     const visibleUsers = allUsers.slice(0, maxVisible);
     const overflowCount = Math.max(0, allUsers.length - maxVisible);
 
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'relative flex items-center';
 
-    // Main Cluster Container (Pill)
+    // Main Cluster Container (Avatar Stack - completely transparent and seamless)
     const cluster = document.createElement('div');
-    cluster.className = 'presence-cluster flex items-center space-x-1.5 p-1 rounded-full backdrop-blur-md bg-white/70 dark:bg-zinc-900/70 border border-white/40 dark:border-zinc-800 shadow-sm transition-all';
+    cluster.className = 'presence-cluster flex items-center -space-x-2 cursor-pointer select-none bg-transparent border-0 shadow-none';
     cluster.setAttribute('role', 'region');
-    cluster.setAttribute('aria-label', 'Connected users');
+    cluster.setAttribute('aria-label', 'Active collaborators');
+    cluster.title = 'Click to view participants';
+    cluster.addEventListener('click', () => {
+      this.togglePopover();
+    });
 
-    // 1. Connection Status Dot
-    const statusDotWrapper = document.createElement('div');
-    statusDotWrapper.className = 'flex items-center pl-2 pr-1';
-    statusDotWrapper.title = `Status: ${this.connectionState}`;
-
-    const dotContainer = document.createElement('span');
-    dotContainer.className = 'relative flex h-2.5 w-2.5';
-
-    if (this.connectionState === 'connected') {
-      dotContainer.innerHTML = `
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-      `;
-    } else if (this.connectionState === 'reconnecting' || this.connectionState === 'connecting') {
-      dotContainer.innerHTML = `
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-      `;
-    } else {
-      dotContainer.innerHTML = `
-        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-zinc-400"></span>
-      `;
-    }
-    statusDotWrapper.appendChild(dotContainer);
-    cluster.appendChild(statusDotWrapper);
-
-    // 2. Visible User Name Badges (Zoom / Google Meet style)
+    // Visible User Avatars / DP (up to 4)
     for (const user of visibleUsers) {
       const isLocal = user.userId === this.localUserId;
       const initials = this.getInitials(user.userId);
-      const displayName = this.formatShortId(user.userId);
 
-      const badge = document.createElement('button');
-      badge.type = 'button';
-      badge.className = 'presence-name-badge flex items-center space-x-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer select-none text-left';
-      badge.title = `${user.userId} ${isLocal ? '(You)' : ''} - Click to see all participants`;
-      badge.setAttribute('aria-expanded', this.isPopoverOpen ? 'true' : 'false');
-      badge.addEventListener('click', (e) => {
+      const avatarBtn = document.createElement('button');
+      avatarBtn.type = 'button';
+      avatarBtn.className = 'presence-avatar-btn relative flex items-center justify-center rounded-full text-white font-bold text-xs shadow-md hover:scale-110 hover:z-20 active:scale-95 transition-all cursor-pointer border-2 border-white dark:border-zinc-900 select-none flex-shrink-0';
+      avatarBtn.style.backgroundColor = user.color;
+      avatarBtn.style.width = '30px';
+      avatarBtn.style.height = '30px';
+      avatarBtn.textContent = initials;
+      avatarBtn.title = `${user.userId}${isLocal ? ' (You)' : ''} - Click to view participants`;
+      avatarBtn.setAttribute('aria-expanded', this.isPopoverOpen ? 'true' : 'false');
+      avatarBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.togglePopover();
       });
 
-      // Avatar circle
-      const avatar = document.createElement('div');
-      avatar.className = 'presence-avatar-circle flex items-center justify-center rounded-full text-white font-bold text-[10px] shadow-sm flex-shrink-0';
-      avatar.style.backgroundColor = user.color;
-      avatar.style.width = '22px';
-      avatar.style.height = '22px';
-      avatar.textContent = initials;
-
-      // User name label
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'presence-name-text text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-[80px]';
-      nameSpan.textContent = displayName;
-
-      badge.append(avatar, nameSpan);
-
-      // (You) tag for local user
       if (isLocal) {
-        const youTag = document.createElement('span');
-        youTag.className = 'presence-you-chip text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300';
-        youTag.textContent = 'You';
-        badge.appendChild(youTag);
+        const youDot = document.createElement('span');
+        youDot.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-indigo-500 border border-white dark:border-zinc-900 shadow-xs';
+        youDot.title = 'You';
+        avatarBtn.appendChild(youDot);
       }
 
-      cluster.appendChild(badge);
+      cluster.appendChild(avatarBtn);
     }
 
-    // 3. Overflow "+more" Badge (Zoom / Google Meet style)
+    // Overflow "..." Badge when more than 4 users
     if (overflowCount > 0) {
       const moreBtn = document.createElement('button');
       moreBtn.type = 'button';
-      moreBtn.className = 'presence-more-pill flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all cursor-pointer border border-zinc-200/50 dark:border-zinc-700/50';
-      moreBtn.title = `+${overflowCount} more connected user${overflowCount > 1 ? 's' : ''} - Click to view list`;
+      moreBtn.className = 'presence-avatar-btn flex items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-800/90 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-xs tracking-wider shadow-md hover:scale-110 hover:z-20 active:scale-95 transition-all cursor-pointer border-2 border-white dark:border-zinc-900 select-none flex-shrink-0';
+      moreBtn.style.width = '30px';
+      moreBtn.style.height = '30px';
+      moreBtn.textContent = '...';
+      moreBtn.title = `+${overflowCount} more - Click to view all`;
       moreBtn.setAttribute('aria-expanded', this.isPopoverOpen ? 'true' : 'false');
-      moreBtn.innerHTML = `<span>+${overflowCount} more</span>`;
       moreBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.togglePopover();
       });
       cluster.appendChild(moreBtn);
-    } else if (visibleUsers.length === 0) {
-      const placeholder = document.createElement('span');
-      placeholder.className = 'text-xs text-zinc-500 px-2';
-      placeholder.textContent = 'Connecting...';
-      cluster.appendChild(placeholder);
     }
 
     rootWrapper.appendChild(cluster);
 
-    // 4. Connected Users Popover List (when clicked)
+    // Connected Users Popover List (when clicked)
     if (this.isPopoverOpen) {
       const popover = this.buildPopover(allUsers);
       rootWrapper.appendChild(popover);
@@ -246,14 +207,14 @@ export class PresenceUI {
   }
 
   /**
-   * Constructs the Connected Users popover dropdown
+   * Constructs the Participants popover dropdown
    */
   private buildPopover(allUsers: PresenceUser[]): HTMLElement {
     const popover = document.createElement('div');
     popover.className = 'presence-popover absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-72 sm:w-80 rounded-2xl p-3.5 backdrop-blur-2xl bg-white/95 dark:bg-zinc-900/95 border border-white/60 dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.18),0_1px_3px_rgba(0,0,0,0.06)] animate-in fade-in zoom-in-95 duration-150';
     popover.setAttribute('role', 'dialog');
     popover.setAttribute('aria-modal', 'false');
-    popover.setAttribute('aria-label', 'Connected Participants List');
+    popover.setAttribute('aria-label', 'Participants List');
 
     // Header
     const header = document.createElement('div');
@@ -264,11 +225,11 @@ export class PresenceUI {
 
     const title = document.createElement('span');
     title.className = 'text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400';
-    title.textContent = 'Connected Users';
+    title.textContent = 'Participants';
 
     const countBadge = document.createElement('span');
-    countBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300/40 dark:border-emerald-800/40';
-    countBadge.textContent = `${allUsers.length} online`;
+    countBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50';
+    countBadge.textContent = `${allUsers.length}`;
 
     titleArea.append(title, countBadge);
 
